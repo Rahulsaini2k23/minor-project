@@ -1,0 +1,9 @@
+# Smart Specs – Campus Navigation System
+# Install: pip install -r requirements.txt
+
+pynmea2
+pyttsx3
+SpeechRecognition
+geopy
+PyAudio
+pyserial
