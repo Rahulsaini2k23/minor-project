@@ -23,16 +23,23 @@
 # ══════════════════════════════════════════════════════════════════════════════
 # IMPORTS
 # ══════════════════════════════════════════════════════════════════════════════
+import os
 import sys
 import time
 import math
 import queue
+import random
 import difflib
 import threading
 import logging
 import platform
+import json
 from dataclasses import dataclass, field
 from typing import Optional, Tuple, Dict, List
+
+# ── Load environment variables from .env ──────────────────────────────────────
+from dotenv import load_dotenv
+load_dotenv()  # reads .env in the working directory
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -60,13 +67,24 @@ _require("pynmea2",            "pynmea2")
 _require("pyttsx3",            "pyttsx3")
 _require("speech_recognition", "speechrecognition")
 _require("geopy",              "geopy")
+_require("googlemaps",         "googlemaps")
 
 import serial                           # noqa: E402
 import pynmea2                          # noqa: E402
 import pyttsx3                          # noqa: E402
 import speech_recognition as sr        # noqa: E402
+import googlemaps                      # noqa: E402
 from geopy.geocoders import Nominatim  # noqa: E402
 from geopy.distance import geodesic    # noqa: E402
+
+# ── Google Maps client ────────────────────────────────────────────────────────
+_GMAPS_KEY = os.getenv("GOOGLE_MAPS_API_KEY", "")
+if _GMAPS_KEY:
+    gmaps_client = googlemaps.Client(key=_GMAPS_KEY)
+    logger.info("Google Maps API key loaded.")
+else:
+    gmaps_client = None
+    logger.warning("GOOGLE_MAPS_API_KEY not found in .env – falling back to Nominatim.")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -116,266 +134,111 @@ class Config:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# NIT JALANDHAR CAMPUS LANDMARK DATABASE
+# LOCATION FINDER  (Google Maps API – fully automated, no hardcoded places)
 # ══════════════════════════════════════════════════════════════════════════════
 @dataclass
-class Landmark:
-    name: str                           # canonical display name
+class Destination:
+    """Holds a resolved destination with name and coordinates."""
+    name: str
     lat: float
     lon: float
-    description: str                    # spoken context ("near the main road")
-    aliases: List[str] = field(default_factory=list)  # alternate spoken names
+    address: str = ""     # full address returned by Google Maps
 
     @property
     def coords(self) -> Tuple[float, float]:
         return (self.lat, self.lon)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# All coordinates are approximate GPS decimal degrees for NIT Jalandhar.
-# Measure with the actual device on campus to refine these values.
-# ─────────────────────────────────────────────────────────────────────────────
-CAMPUS_LANDMARKS: List[Landmark] = [
-    # ── Entry ─────────────────────────────────────────────────────────────────
-    Landmark("Main Gate",         31.3945, 75.5275,
-             "the main entrance on GT Road bypass",
-             ["gate", "main gate", "entrance", "mukhy dwar"]),
-
-    Landmark("Back Gate",         31.3990, 75.5335,
-             "the rear campus gate towards Bidhipur village",
-            ["back gate", "rear gate", "pichla gate"]),
-
-    # ── Academic ──────────────────────────────────────────────────────────────
-    Landmark("Admin Block / Gole Building", 31.3967, 75.5303,
-             "the circular administrative building at the centre of campus",
-             ["admin", "admin block", "gole building", "director office",
-              "administration", "gol building"]),
-
-    Landmark("Central Library",   31.3972, 75.5298,
-             "the three-storey central library",
-             ["library", "central library", "pustakalaya", "lib"]),
-
-    Landmark("CSE Department",    31.3975, 75.5315,
-             "the Computer Science and Engineering department block",
-             ["CSE", "computer science", "computer department", "IT",
-              "information technology"]),
-
-    Landmark("ECE Department",    31.3978, 75.5320,
-             "the Electronics and Communication Engineering department",
-             ["ECE", "electronics", "electronics department"]),
-
-    Landmark("Civil Engineering", 31.3980, 75.5305,
-             "the Civil Engineering department",
-             ["civil", "civil department", "civil engineering"]),
-
-    Landmark("Mechanical Engineering", 31.3982, 75.5310,
-             "the Mechanical Engineering department",
-             ["mechanical", "mech", "mechanical department"]),
-
-    Landmark("Chemical Engineering", 31.3977, 75.5293,
-             "the Chemical Engineering department",
-             ["chemical", "chem department", "chemical engineering"]),
-
-    Landmark("Biotechnology Department", 31.3974, 75.5290,
-             "the Biotechnology department",
-             ["biotech", "biotechnology", "biology department"]),
-
-    Landmark("Physics Department", 31.3969, 75.5318,
-             "the Physics department block",
-             ["physics", "physics department"]),
-
-    Landmark("Mathematics Department", 31.3971, 75.5321,
-             "the Mathematics and Computing department",
-             ["maths", "mathematics", "math department"]),
-
-    Landmark("Workshop / IPE",    31.3983, 75.5295,
-             "the industrial workshop and IPE department",
-             ["workshop", "IPE", "production", "industrial engineering"]),
-
-    Landmark("Seminar Hall",      31.3970, 75.5308,
-             "the central seminar hall used for events and lectures",
-             ["seminar hall", "seminar", "conference hall"]),
-
-    Landmark("Lecture Hall Complex", 31.3966, 75.5312,
-             "the main lecture hall complex",
-             ["lecture hall", "LHC", "lecture complex", "classroom block"]),
-
-    # ── Hostels ───────────────────────────────────────────────────────────────
-    Landmark("Boys Hostel 1 (BH1)", 31.3955, 75.5318,
-             "Boys Hostel 1, used for first-year students",
-             ["BH1", "hostel 1", "boys hostel 1", "first year hostel"]),
-
-    Landmark("Boys Hostel 2 (BH2)", 31.3952, 75.5322,
-             "Boys Hostel 2",
-             ["BH2", "hostel 2", "boys hostel 2"]),
-
-    Landmark("Boys Hostel 3 (BH3)", 31.3949, 75.5325,
-             "Boys Hostel 3",
-             ["BH3", "hostel 3", "boys hostel 3"]),
-
-    Landmark("Boys Hostel 4 (BH4)", 31.3947, 75.5328,
-             "Boys Hostel 4",
-             ["BH4", "hostel 4", "boys hostel 4"]),
-
-    Landmark("Boys Hostel 6 (BH6)", 31.3955, 75.5332,
-             "Boys Hostel 6",
-             ["BH6", "hostel 6", "boys hostel 6"]),
-
-    Landmark("Boys Hostel 7 (BH7)", 31.3952, 75.5335,
-             "Boys Hostel 7",
-             ["BH7", "hostel 7", "boys hostel 7"]),
-
-    Landmark("Mega Boys Hostel – A Block (MBH-A)", 31.3943, 75.5310,
-             "Mega Boys Hostel A Block",
-             ["MBH", "MBH-A", "mega boys hostel", "mega hostel a"]),
-
-    Landmark("Mega Boys Hostel – B Block (MBH-B)", 31.3941, 75.5315,
-             "Mega Boys Hostel B Block",
-             ["MBH-B", "mega hostel b", "mega boys b"]),
-
-    Landmark("Mega Boys Hostel – F Block (MBH-F)", 31.3939, 75.5320,
-             "Mega Boys Hostel F Block",
-             ["MBH-F", "mega hostel f", "mega boys f"]),
-
-    Landmark("Girls Hostel 1 (GH1)", 31.3960, 75.5340,
-             "Girls Hostel 1, for first-year female students",
-             ["GH1", "girls hostel 1", "girls hostel one"]),
-
-    Landmark("Girls Hostel 2 (GH2)", 31.3957, 75.5343,
-             "Girls Hostel 2",
-             ["GH2", "girls hostel 2", "girls hostel two"]),
-
-    Landmark("Mega Girls Hostel (MGH)", 31.3954, 75.5346,
-             "Mega Girls Hostel, for senior female students",
-             ["MGH", "mega girls hostel", "mega girls"]),
-
-    # ── Facilities ────────────────────────────────────────────────────────────
-    Landmark("Student Activity Centre (SAC)", 31.3950, 75.5305,
-             "the Student Activity Centre with gym, club rooms and open-air theatre",
-             ["SAC", "activity centre", "gym", "student centre", "student activity"]),
-
-    Landmark("Open Air Theatre (OAT)", 31.3948, 75.5308,
-             "the Open Air Theatre with seating for 1000 people",
-             ["OAT", "open air theatre", "amphitheatre", "theatre"]),
-
-    Landmark("Shopping Complex",  31.3963, 75.5290,
-             "the campus shopping complex with book shop and Xerox",
-             ["shopping complex", "market", "canteen", "shops", "dukaan",
-              "book shop", "bookshop", "xerox"]),
-
-    Landmark("Dispensary / Health Centre", 31.3968, 75.5285,
-             "the campus health centre and dispensary",
-             ["dispensary", "health centre", "hospital", "doctor",
-              "medical", "clinic"]),
-
-    Landmark("Guest House",       31.3980, 75.5288,
-             "the institute guest house",
-             ["guest house", "guesthouse", "atithi bhavan"]),
-
-    Landmark("Post Office",       31.3963, 75.5286,
-             "the NIT campus post office",
-             ["post office", "dak ghar", "post"]),
-
-    Landmark("Canara Bank ATM",   31.3966, 75.5292,
-             "the Canara Bank branch and ATM",
-             ["canara bank", "bank", "ATM", "Canara ATM"]),
-
-    Landmark("State Bank ATM (SBI)", 31.3964, 75.5294,
-             "the State Bank of India branch",
-             ["SBI", "state bank", "SBI ATM"]),
-
-    # ── Sports ────────────────────────────────────────────────────────────────
-    Landmark("Sports Complex",    31.3942, 75.5295,
-             "the outdoor sports complex with 400-metre track, football and cricket ground",
-             ["sports complex", "ground", "sports", "football ground",
-              "cricket ground", "track"]),
-
-    Landmark("Swimming Pool",     31.3940, 75.5300,
-             "the international-standard swimming pool with diving arena",
-             ["swimming pool", "pool", "tairaki", "swimming"]),
-
-    Landmark("Basketball Courts", 31.3945, 75.5288,
-             "the flood-lit basketball courts",
-             ["basketball", "basketball court"]),
-
-    Landmark("Tennis Courts",     31.3947, 75.5285,
-             "the lawn tennis courts",
-             ["tennis", "tennis courts", "lawn tennis"]),
-
-    Landmark("Badminton Hall",    31.3950, 75.5300,
-             "the indoor badminton hall with four wooden courts",
-             ["badminton", "badminton hall", "indoor sports"]),
-
-    # ── Canteen / Food ────────────────────────────────────────────────────────
-    Landmark("Boys Hostel Mess",  31.3953, 75.5327,
-             "the main boys hostel mess and canteen",
-             ["mess", "boys mess", "hostel mess", "khana"]),
-
-    Landmark("Cafeteria",         31.3965, 75.5300,
-             "the central campus cafeteria near the lecture halls",
-             ["cafeteria", "food court", "central canteen", "chai"]),
-]
-
-# Build a flat lookup dictionary: every alias → Landmark
-_ALIAS_MAP: Dict[str, Landmark] = {}
-for _lm in CAMPUS_LANDMARKS:
-    _ALIAS_MAP[_lm.name.lower()] = _lm
-    for _alias in _lm.aliases:
-        _ALIAS_MAP[_alias.lower()] = _lm
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# CAMPUS LANDMARK RESOLVER
-# ══════════════════════════════════════════════════════════════════════════════
-class LandmarkResolver:
+class LocationFinder:
     """
-    Resolves a spoken place name to a campus Landmark.
-    Uses exact → prefix → fuzzy matching in order.
-    Falls back to Nominatim geocoding if no campus match found.
+    Geocodes any user-spoken place name via Google Maps Geocoding API.
+    No hardcoded landmarks — everything is looked up live.
+    Falls back to Nominatim if Google Maps is unavailable.
     """
+
+    _nominatim = Nominatim(user_agent="smart_specs_nitj_v3")
 
     @staticmethod
-    def resolve(spoken: str) -> Optional[Landmark]:
-        key = spoken.lower().strip()
+    def find(place_name: str) -> Optional[Destination]:
+        """
+        Look up any place by name. Automatically appends 'NIT Jalandhar'
+        context for campus locations, but also works for any address.
+        """
+        place = place_name.strip()
+        if not place:
+            return None
 
-        # 1. Exact match
-        if key in _ALIAS_MAP:
-            return _ALIAS_MAP[key]
-
-        # 2. Substring match (user said part of the name)
-        for alias, lm in _ALIAS_MAP.items():
-            if key in alias or alias in key:
-                return lm
-
-        # 3. Fuzzy match (handles mispronunciation / STT errors)
-        all_keys = list(_ALIAS_MAP.keys())
-        matches = difflib.get_close_matches(
-            key, all_keys, n=1, cutoff=Config.FUZZY_THRESHOLD
+        # Try with campus context first (helps find campus-specific places)
+        dest = LocationFinder._try_geocode(
+            f"{place}, NIT Jalandhar, Punjab, India"
         )
-        if matches:
-            lm = _ALIAS_MAP[matches[0]]
-            logger.info("Fuzzy matched '%s' → '%s'", spoken, lm.name)
-            return lm
+        if dest:
+            return dest
 
-        return None     # not found in campus DB
+        # Try without campus context (for general locations)
+        dest = LocationFinder._try_geocode(
+            f"{place}, Jalandhar, Punjab, India"
+        )
+        if dest:
+            return dest
+
+        # Try the raw query as-is (for full addresses)
+        dest = LocationFinder._try_geocode(place)
+        return dest
 
     @staticmethod
-    def geocode_external(place_name: str) -> Optional[Tuple[float, float]]:
-        """Fall-back: geocode via OpenStreetMap Nominatim."""
+    def _try_geocode(query: str) -> Optional[Destination]:
+        """Try Google Maps first, then Nominatim."""
+        dest = LocationFinder._google_geocode(query)
+        if dest:
+            return dest
+        return LocationFinder._nominatim_geocode(query)
+
+    @staticmethod
+    def _google_geocode(query: str) -> Optional[Destination]:
+        """Geocode via Google Maps Geocoding API."""
+        if not gmaps_client:
+            return None
         try:
-            geolocator = Nominatim(user_agent="smart_specs_nitj_v3")
-            query = f"{place_name}, Jalandhar, Punjab, India"
-            location = geolocator.geocode(query, timeout=10)
-            if location:
-                logger.info("Geocoded '%s' → (%.6f, %.6f)",
-                            place_name, location.latitude, location.longitude)
-                return (location.latitude, location.longitude)
-            logger.warning("Nominatim returned nothing for: %s", query)
+            results = gmaps_client.geocode(query)
+            # Log the raw response so the user can see it in the console
+            print("\n=== GOOGLE MAPS API RESPONSE ===")
+            print(json.dumps(results, indent=2))
+            print("==================================\n")
+            
+            if results:
+                result = results[0]
+                loc = result["geometry"]["location"]
+                address = result.get("formatted_address", "")
+                # Extract a short readable name from the address
+                name = address.split(",")[0] if address else query.split(",")[0].strip()
+                logger.info("[Google Maps] '%s' → (%.6f, %.6f) — %s",
+                            query, loc["lat"], loc["lng"], address)
+                return Destination(
+                    name=name, lat=loc["lat"], lon=loc["lng"], address=address
+                )
+            logger.warning("[Google Maps] No results for: %s", query)
         except Exception as exc:
-            logger.error("Geocoding error: %s", exc)
+            logger.error("[Google Maps] Geocoding error: %s", exc)
         return None
 
-
+    @staticmethod
+    def _nominatim_geocode(query: str) -> Optional[Destination]:
+        """Geocode via OpenStreetMap Nominatim (free fallback)."""
+        try:
+            location = LocationFinder._nominatim.geocode(query, timeout=10)
+            if location:
+                logger.info("[Nominatim] '%s' → (%.6f, %.6f)",
+                            query, location.latitude, location.longitude)
+                return Destination(
+                    name=query.split(",")[0].strip(),
+                    lat=location.latitude, lon=location.longitude,
+                    address=location.address or ""
+                )
+            logger.warning("[Nominatim] No results for: %s", query)
+        except Exception as exc:
+            logger.error("[Nominatim] Geocoding error: %s", exc)
+        return None
 # ══════════════════════════════════════════════════════════════════════════════
 # INDIAN CAMPUS HAZARD AWARENESS
 # (Inspired by AV-Lab/RoadSceneUnderstanding – adapted for campus pedestrian use)
@@ -697,138 +560,153 @@ class NavigationEngine:
 class Script:
 
     WELCOME = (
-        "Namaskar! Welcome to Smart Specs, your personal navigation assistant "
-        "at Dr. B. R. Ambedkar National Institute of Technology, Jalandhar. "
-        "I am here to guide you safely to any location on campus. "
-        "Please give me a moment while I set everything up."
+        "Namaskar! Welcome to Smart Specs, your campus navigation companion "
+        "at NIT Jalandhar. "
+        "I will help you reach any place on campus. "
+        "Just a moment while I get ready."
     )
     WAITING_GPS = (
-        "I am acquiring your GPS signal. "
-        "Please hold the device steady and ensure you are in an open area. "
-        "This will only take a few seconds."
+        "Getting your GPS location now. "
+        "Please stay in an open area, this will be quick."
     )
     GPS_READY = (
-        "GPS signal acquired. I have a strong fix with good satellite coverage. "
-        "The system is fully ready. Let us begin."
+        "Got it! Your location is locked in. "
+        "We are all set, let us go."
     )
     GPS_FAILED = (
-        "I am sorry, I was unable to acquire a GPS signal. "
-        "Please ensure the GPS module is properly connected and try again in an open area. "
-        "Shutting down for now."
+        "Sorry, I could not get a GPS signal right now. "
+        "Please check the GPS module and try again outdoors."
     )
     NOT_ON_CAMPUS = (
-        "It appears you may be outside the NIT Jalandhar campus boundary. "
-        "Campus navigation works best within the 154-acre campus area. "
-        "I will still try to guide you."
+        "You seem to be outside the campus area. "
+        "I will still do my best to guide you."
     )
     ASK_DESTINATION = (
-        "Aap kahan jaana chahte hain? "  # Hindi: Where do you want to go?
-        "Where would you like to go on campus? "
-        "You can say the name of any building, hostel, department, or facility. "
-        "For example: library, admin block, boys hostel 1, sports complex, "
-        "or shopping complex."
+        "Where would you like to go? "
+        "Just tell me the name, like library, hostel, or admin block."
     )
-    LISTENING_CUE = "Please speak now."
-    SEARCHING     = "Ji haan – Let me find that for you. One moment please."
+    LISTENING_CUE = "Go ahead, I am listening."
+    SEARCHING     = "Let me look that up for you."
     NOT_FOUND_CAMPUS = (
-        "I am sorry, I could not find that location on the NIT Jalandhar campus. "
-        "Please try again with a different name. "
-        "For example you can say: library, admin block, BH1, mess, or dispensary."
+        "Hmm, I could not find that place. "
+        "Could you try a different name? "
+        "For example: library, mess, BH1, or sports complex."
     )
     TIMEOUT = (
-        "Maine sunaa nahin – I did not quite catch that. "
-        "Please speak clearly and close to the microphone and try again."
+        "I did not catch that. Could you try again please?"
     )
     NOT_UNDERSTOOD = (
-        "I am sorry, I could not understand. Please repeat slowly and clearly."
+        "Sorry, I missed that. Please say it once more."
     )
     VOICE_UNAVAILABLE = (
-        "Voice service is temporarily unavailable. "
-        "Please check your internet connection and try again."
+        "The voice service is not available right now. "
+        "Please check your internet connection."
     )
-    NO_MIC = "No microphone detected. Please connect a microphone and restart."
+    NO_MIC = "No microphone found. Please connect one and restart."
     GPS_LOST = (
-        "GPS signal lost. Please stay where you are for a moment. "
-        "I am trying to reconnect."
+        "I have lost the GPS signal. "
+        "Please stay still for a moment, I am reconnecting."
     )
-    GPS_REGAINED = "GPS signal restored. Let us continue."
-    NAV_ERROR     = "A small navigation error occurred. Retrying."
+    GPS_REGAINED = "Got the signal back! Let us keep going."
+    NAV_ERROR     = "Oops, a small error. Let me recalculate."
     CONTINUE_PROMPT = (
-        "Aur kahan jaana hai? Do you need to go anywhere else on campus? "
-        "Please say yes to navigate again or no to exit."
+        "Would you like to go somewhere else? "
+        "Say yes or no."
     )
 
     @staticmethod
-    def found_campus(lm: Landmark) -> str:
+    def found_location(dest: Destination) -> str:
+        address_info = f" near {dest.address.split(',')[1].strip()}" if dest.address and len(dest.address.split(',')) > 1 else ""
         return (
-            f"Found it! {lm.name} — {lm.description}. "
-            f"I will now guide you there step by step. "
-            f"Please walk at your own comfortable pace."
+            f"Great, I found {dest.name}{address_info}. "
+            f"Let me guide you there now."
         )
 
     @staticmethod
     def found_external(name: str) -> str:
         return (
-            f"I found {name} near the campus. "
-            "Navigating now. Please follow my instructions carefully."
+            f"I found {name} nearby. "
+            "Let me take you there."
         )
 
     @staticmethod
     def nav_start(dest: str, dist_m: int) -> str:
         return (
-            f"We are heading to {dest}. "
-            f"The total distance is approximately {dist_m} metres. "
-            "I will give you direction updates every few seconds."
+            f"Alright, {dest} is about {dist_m} metres away. "
+            "I will guide you step by step."
         )
 
+    # ── Varied, natural navigation phrases ────────────────────────────────
+    _TURN_PHRASES = [
+        "Please {turn}, towards {cardinal}. About {dist} metres to go.",
+        "Go ahead and {turn}. You are heading {cardinal}, {dist} metres left.",
+        "{turn} now, towards {cardinal}. Still {dist} metres away.",
+        "Keep going, {turn}, direction {cardinal}. {dist} metres remaining.",
+        "You are doing well. {turn}, heading {cardinal}. {dist} metres more.",
+    ]
+
+    _FIRST_PHRASES = [
+        "Your destination is about {dist} metres to the {cardinal}. Start walking, I will guide you.",
+        "It is {dist} metres towards {cardinal}. Go ahead and I will keep you on track.",
+        "About {dist} metres in the {cardinal} direction. Let us start moving.",
+    ]
+
+    _PROGRESS_PHRASES = [
+        "You are getting closer. {dist} metres to go, keep heading {cardinal}.",
+        "Almost halfway there. {dist} metres remaining, {cardinal} direction.",
+        "Good progress! {dist} metres left. Keep going {cardinal}.",
+        "You are on the right path. {dist} metres more towards {cardinal}.",
+        "Nicely done, {dist} metres remaining. Stay on course, {cardinal}.",
+    ]
+
     @staticmethod
-    def instruction(turn: str, cardinal: str, dist_m: int) -> str:
-        return (
-            f"Please {turn}, heading {cardinal}. "
-            f"Distance remaining: {dist_m} metres."
-        )
+    def instruction(turn: str, cardinal: str, dist_m: int, update_count: int = 0) -> str:
+        """Pick a varied, natural instruction based on context."""
+        if update_count > 0 and update_count % 3 == 0:
+            # Every 3rd update, give an encouraging progress message
+            template = random.choice(Script._PROGRESS_PHRASES)
+            return template.format(dist=dist_m, cardinal=cardinal)
+        template = random.choice(Script._TURN_PHRASES)
+        # Capitalize the turn instruction if it starts the sentence
+        turn_cap = turn[0].upper() + turn[1:] if turn else turn
+        return template.format(turn=turn_cap, cardinal=cardinal, dist=dist_m)
 
     @staticmethod
     def first_update(cardinal: str, dist_m: int) -> str:
-        return (
-            f"Your destination is {dist_m} metres to the {cardinal}. "
-            "Please start walking and I will provide turn-by-turn directions."
-        )
+        template = random.choice(Script._FIRST_PHRASES)
+        return template.format(dist=dist_m, cardinal=cardinal)
 
     @staticmethod
     def arrived(name: str) -> str:
-        return (
-            f"Aap pahunch gaye! You have arrived at {name}! "
-            "I am delighted to have guided you here safely. "
-            "Please take a moment to orient yourself. "
-            "Have a wonderful time, and I am here whenever you need me again."
-        )
+        phrases = [
+            f"You have reached {name}! Great job getting here.",
+            f"Here we are, {name}! Hope the walk was smooth.",
+            f"We made it to {name}. I am glad I could help.",
+        ]
+        return random.choice(phrases)
 
     @staticmethod
     def retry_prompt(attempt: int, total: int) -> str:
         return (
-            f"Let us try once more — attempt {attempt} of {total}. "
-            "Please say the campus location name slowly and clearly."
+            f"Let us try again, attempt {attempt} of {total}. "
+            "Please type or say the location name clearly."
         )
 
     GIVE_UP = (
-        "I was not able to understand after several attempts. "
-        "Let us start fresh — where would you like to go?"
+        "I could not get that. Let us start over. "
+        "Where would you like to go?"
     )
 
     @staticmethod
     def shutdown(completed_journey: bool) -> str:
         if completed_journey:
             return (
-                "Dhanyavaad! Thank you so much for using Smart Specs today. "
-                "It was a true honour to be your guide on campus. "
-                "Please stay safe, and do come back whenever you need assistance. "
-                "Alvida — goodbye!"
+                "Thank you for using Smart Specs! "
+                "It was great guiding you today. Take care and see you next time!"
             )
         return (
             "Smart Specs shutting down. "
-            "Thank you for using this system. "
-            "Please take care and stay safe. Alvida — goodbye!"
+            "Take care and stay safe. See you next time!"
         )
 
 
@@ -1151,13 +1029,6 @@ class SmartSpecsApp:
     def _ask_destination_text(self) -> Optional[str]:
         """Keyboard-based destination input with TTS prompt."""
         self._voice.speak_and_wait(Script.ASK_DESTINATION)
-        # Print available landmarks for user reference
-        print("\n" + "═" * 60)
-        print("  AVAILABLE CAMPUS LOCATIONS:")
-        print("═" * 60)
-        for lm in CAMPUS_LANDMARKS:
-            print(f"  • {lm.name}")
-        print("═" * 60)
 
         for attempt in range(1, Config.MAX_RETRIES + 1):
             if self._stop.is_set():
@@ -1176,22 +1047,39 @@ class SmartSpecsApp:
         self._voice.speak_and_wait(Script.GIVE_UP)
         return None
 
-    def _ask_destination_voice(self) -> Optional[str]:
-        """Microphone-based destination input (original flow)."""
-        result = self._voice.listen(prompt=Script.ASK_DESTINATION)
-        if result:
-            return result
+    def _ask_destination_voice(self) -> None:
+        """
+        Microphone-based destination input.
+        Keeps listening indefinitely until the user speaks a location.
+        Never gives up — only Ctrl+C stops it.
+        """
+        self._voice.speak_and_wait(Script.ASK_DESTINATION)
 
-        for attempt in range(2, Config.MAX_RETRIES + 1):
-            if self._stop.is_set():
-                return None
-            msg = (Script.TIMEOUT if attempt == 2 else
-                   Script.retry_prompt(attempt, Config.MAX_RETRIES))
-            result = self._voice.listen(prompt=msg)
+        attempt = 0
+        while not self._stop.is_set():
+            attempt += 1
+
+            # Listen for speech
+            result = self._voice.listen(
+                prompt=None,   # don't repeat the full prompt every time
+                cue=Script.LISTENING_CUE if attempt == 1 else ""
+            )
+
             if result:
                 return result
 
-        self._voice.speak_and_wait(Script.GIVE_UP)
+            # Didn't hear anything — gentle reminder and try again
+            reminders = [
+                "I am still listening. Please say the location name.",
+                "Take your time. Just say where you would like to go.",
+                "I did not catch that. Please try again whenever you are ready.",
+                "No hurry. Just say the name of the place clearly.",
+                "I am right here, waiting. Please speak the destination.",
+            ]
+            reminder = reminders[attempt % len(reminders)]
+            logger.info("Listen attempt %d — no response, retrying.", attempt)
+            self._voice.speak_and_wait(reminder, pause=0.3)
+
         return None
 
     # ── Navigation loop ───────────────────────────────────────────────────────
@@ -1205,11 +1093,14 @@ class SmartSpecsApp:
             (fix.lat, fix.lon), dest_coords
         ))
         self._voice.speak_and_wait(Script.nav_start(dest_name, initial_dist))
-        logger.info("Navigating to '%s' @ %s", dest_name, dest_coords)
+        logger.info("Navigating to '%s' @ (%.6f, %.6f)", dest_name,
+                    dest_coords[0], dest_coords[1])
 
-        last_spoken  = 0.0
-        gps_lost     = False
-        last_hazard  = ""
+        last_spoken    = 0.0
+        gps_lost       = False
+        last_hazard    = ""
+        update_count   = 0        # track how many updates spoken
+        last_msg       = ""       # avoid exact same message twice in a row
 
         while not self._stop.is_set():
 
@@ -1257,9 +1148,16 @@ class SmartSpecsApp:
                     heading  = self._nav.bearing(prev.lat, prev.lon,
                                                  fix.lat, fix.lon)
                     turn_str = self._nav.turn(heading, brg)
-                    msg      = Script.instruction(turn_str, cardinal, dist_m)
+                    msg      = Script.instruction(turn_str, cardinal, dist_m,
+                                                  update_count)
                 else:
                     msg = Script.first_update(cardinal, dist_m)
+
+                # Avoid repeating the exact same sentence
+                if msg == last_msg:
+                    msg = Script.instruction(
+                        "keep walking", cardinal, dist_m, update_count
+                    )
 
                 # ── Throttled speech ──────────────────────────────────────────
                 now = time.monotonic()
@@ -1267,6 +1165,8 @@ class SmartSpecsApp:
                     logger.info("[NAV] %s", msg)
                     self._voice.speak(msg)
                     last_spoken = now
+                    last_msg    = msg
+                    update_count += 1
 
                 # Log satellite / speed info periodically
                 if fix.satellites:
@@ -1299,17 +1199,35 @@ class SmartSpecsApp:
         return True
 
     def _ask_continue_voice(self) -> bool:
-        """Microphone-based continue prompt (original flow)."""
-        answer = self._voice.listen(
-            prompt=Script.CONTINUE_PROMPT,
-            cue="Please say yes or no."
-        )
-        if not answer:
-            return True   # no response → assume yes
-        al = answer.lower()
-        if any(w in al for w in ["no", "nahi", "nahin", "band", "exit", "stop", "done"]):
-            return False
-        return True
+        """
+        Microphone-based continue prompt.
+        Keeps listening until it gets a clear yes or no.
+        """
+        self._voice.speak_and_wait(Script.CONTINUE_PROMPT)
+
+        while not self._stop.is_set():
+            answer = self._voice.listen(
+                prompt=None,
+                cue="Please say yes or no."
+            )
+            if answer:
+                al = answer.lower()
+                if any(w in al for w in ["no", "nahi", "nahin", "band",
+                                          "exit", "stop", "done"]):
+                    return False
+                if any(w in al for w in ["yes", "haan", "ha", "sure",
+                                          "ok", "yeah", "continue"]):
+                    return True
+                # Heard something but not yes/no — ask again
+                self._voice.speak_and_wait(
+                    "I heard you, but could you say yes or no?"
+                )
+            else:
+                self._voice.speak_and_wait(
+                    "I am still listening. Please say yes or no."
+                )
+
+        return False
 
     # ── Main loop ─────────────────────────────────────────────────────────────
     def run(self) -> None:
@@ -1344,21 +1262,14 @@ class SmartSpecsApp:
                 dest_name:   str
                 dest_coords: Tuple[float, float]
 
-                lm = LandmarkResolver.resolve(spoken)
-                if lm:
-                    dest_name   = lm.name
-                    dest_coords = lm.coords
-                    self._voice.speak_and_wait(Script.found_campus(lm))
+                dest = LocationFinder.find(spoken)
+                if dest:
+                    dest_name   = dest.name
+                    dest_coords = dest.coords
+                    self._voice.speak_and_wait(Script.found_location(dest))
                 else:
-                    # Try Nominatim for off-campus or unrecognised names
-                    coords = LandmarkResolver.geocode_external(spoken)
-                    if coords:
-                        dest_name   = spoken.title()
-                        dest_coords = coords
-                        self._voice.speak_and_wait(Script.found_external(dest_name))
-                    else:
-                        self._voice.speak_and_wait(Script.NOT_FOUND_CAMPUS)
-                        continue
+                    self._voice.speak_and_wait(Script.NOT_FOUND_CAMPUS)
+                    continue
 
                 # 3. Navigate
                 arrived = self._navigate_to(dest_name, dest_coords)
