@@ -1,0 +1,318 @@
+{
+  "html_attributions": [],
+  "results": [
+    {
+      "business_status": "OPERATIONAL",
+      "formatted_address": "9GVM+Q6C, Grand Trunk Rd, Gopalpur Alias Bidh, Punjab 144008, India",
+      "geometry": {
+        "location": {
+          "lat": 31.3943068,
+          "lng": 75.533214
+        },
+        "viewport": {
+          "northeast": {
+            "lat": 31.39559768029149,
+            "lng": 75.53467808029151
+          },
+          "southwest": {
+            "lat": 31.3928997197085,
+            "lng": 75.53198011970849
+          }
+        }
+      },
+      "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/school-71.png",
+      "icon_background_color": "#7B9EB0",
+      "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/school_pinlet",
+      "name": "Nit Jalandhar",
+      "photos": [
+        {
+          "height": 3072,
+          "html_attributions": [
+            "<a href=\"https://maps.google.com/maps/contrib/117893550222405303234\">Bhavinkumar Shekhada</a>"
+          ],
+          "photo_reference": "ATCDNfUKoPCXQYHJqb_wM7QVr8Fp1pW0-K3M75LLAAj7WZcR_8rtHNaXpuffYksRrgj0yi-RWdKie3JbHdXUdQePLqhth3S8_Mbha-gauqBc8LaT99UmW-mDduQzCvspjc9hQ6pDe_9to_G0vRYpm0qSGldVNVSwDVqaOlzxQKdheYWVGP4aV6S3ZfCSrgkVelfi0SPPRL93c4LOZAS5yIiVIjeEwucfQxvqpTUYhkJ4wOhXa2gKy3iZ_gwNSSeqVZV61Y96-1cPYiY-uPthwmgJlDzKInxTmO6EdQoKnYZx44XXWvcUd4_WNopmobuJthh9F_5SfUBie35ocRZxVaRnhhNIHt44K3qwQIElNEAVgNxTyqs333JX0MgHhomSPtgEGB3pv8xsjOHCWsjMEqAKiKYlxMYJfVafLQH7bDfj8kM8Sw",
+          "width": 4096
+        }
+      ],
+      "place_id": "ChIJo_cTZQBRGjkRjsN6ZzEsCfg",
+      "rating": 4.6,
+      "reference": "ChIJo_cTZQBRGjkRjsN6ZzEsCfg",
+      "types": [
+        "establishment",
+        "point_of_interest"
+      ],
+      "user_ratings_total": 79
+    },
+    {
+      "business_status": "OPERATIONAL",
+      "formatted_address": "Grand Trunk Road, Barnala - Amritsar Bypass Rd, Jalandhar, Gopalpur Alias Bidh, Punjab 144008, India",
+      "geometry": {
+        "location": {
+          "lat": 31.3958746,
+          "lng": 75.5358439
+        },
+        "viewport": {
+          "northeast": {
+            "lat": 31.3971471802915,
+            "lng": 75.53702963029149
+          },
+          "southwest": {
+            "lat": 31.3944492197085,
+            "lng": 75.53433166970848
+          }
+        }
+      },
+      "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/school-71.png",
+      "icon_background_color": "#7B9EB0",
+      "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/school_pinlet",
+      "name": "Dr B R Ambedkar National Institute of Technology Jalandhar",
+      "opening_hours": {
+        "open_now": false
+      },
+      "photos": [
+        {
+          "height": 3599,
+          "html_attributions": [
+            "<a href=\"https://maps.google.com/maps/contrib/113316444353703627532\">Gagneet Singh</a>"
+          ],
+          "photo_reference": "ATCDNfU86VC2eQPVaJ4jTJUhto5XNvI5xTBgPwUbbPN-clpiG8W9rIfExlh5ZitFM5X1o0oSUqn8nIcXyPpezkvf1J6CHV3QVy9Yf6k2usGIwyA5iEusklyvrplnA_fdZAHQOd0s-Z0I0CIuuBmH-r-KQYGqKVkilz-PLNEdSLaqcawKQsjT4KOgnIHMBYUsnN1ENexq5MfjqKQK7qUjI-Bu2JaRKc2A-ItlCJtcuH9nRryaeWKQggRHZEVghVl2EQrqxPblBM4kYFebnrIEgb7gS9w7DbRBouVjP3TCeAwtN5PoYuOfxdcLZtKXZ3DE7sBoP7eFDjMmIbPvndMGvoL1VC2Z_TMmQYnHblkts-OA25A0p-StmEC4PGOu7CsT6Drvq_KK6jrkyClDCN6QBy1413ojmFuQnLmY2qJoKnq_-xQllQ7G",
+          "width": 4800
+        }
+      ],
+      "place_id": "ChIJ3w4YDNNRGjkRM-8XjXEzdls",
+      "plus_code": {
+        "compound_code": "9GWP+88 Jalandhar, Punjab, India",
+        "global_code": "8J3Q9GWP+88"
+      },
+      "rating": 4.4,
+      "reference": "ChIJ3w4YDNNRGjkRM-8XjXEzdls",
+      "types": [
+        "establishment",
+        "point_of_interest"
+      ],
+      "user_ratings_total": 1430
+    },
+    {
+      "business_status": "OPERATIONAL",
+      "formatted_address": "2nd Floor, New Workshop Building, Dr B R Ambedkar NIT, 9GXP+52V, NIT, Jalandhar, Gopalpur Alias Bidh, Punjab 144008, India",
+      "geometry": {
+        "location": {
+          "lat": 31.3979407,
+          "lng": 75.5350242
+        },
+        "viewport": {
+          "northeast": {
+            "lat": 31.3993459302915,
+            "lng": 75.5363240302915
+          },
+          "southwest": {
+            "lat": 31.3966479697085,
+            "lng": 75.53362606970848
+          }
+        }
+      },
+      "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/generic_business-71.png",
+      "icon_background_color": "#7B9EB0",
+      "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/generic_pinlet",
+      "name": "NITJ Technology Business Incubator",
+      "photos": [
+        {
+          "height": 3072,
+          "html_attributions": [
+            "<a href=\"https://maps.google.com/maps/contrib/101770308051435462433\">HARSH KUMAR VERMA</a>"
+          ],
+          "photo_reference": "ATCDNfWQB4lTC0yh7chhM2I8dIzgJgcAExtvAKCDTh3UZZ83eLYspmmjU-nCAt0XTPqxGYrruTQaLWZQKd_pLvsuR5aigHBioVu5XvcLuXvHFG_u0EzEUjP18Bwk5Eh2eVbV02HorhCI0GPZUGzvtCrKfi53ojvc46nsK2xwB3kviVLZPLb16FRSTR4TMIETASkA6VzKNRLL9Cfc4BgjrquCwNmRt6cmQo6ZjsxMMDNbWJf6UWqwYZtfLXyWWx7jRD-zbD-4gVI9_BR068_iDukLi2in7BX1E8W3zn0E8uATEOMhwfTQde1uMCJVBHDct6ppp8KRwOPCV-enCzY_Rn1IlKr8z9AiE2FlIXAsfOcmGPDfg-joNe9ZuL2qVeJ1wInDmaIp5rUEuw7LAXN4BYiNqmZNGKmcexcRpVExDIZsXAUoZQ",
+          "width": 4096
+        }
+      ],
+      "place_id": "ChIJ4YuYxftRGjkRKzuLGz7bIEA",
+      "rating": 4.6,
+      "reference": "ChIJ4YuYxftRGjkRKzuLGz7bIEA",
+      "types": [
+        "establishment",
+        "point_of_interest"
+      ],
+      "user_ratings_total": 52
+    },
+    {
+      "business_status": "OPERATIONAL",
+      "formatted_address": "R46M+M55, Garthi Khurad, Bakoli, Delhi, 110036, India",
+      "geometry": {
+        "location": {
+          "lat": 28.811636,
+          "lng": 77.13299769999999
+        },
+        "viewport": {
+          "northeast": {
+            "lat": 28.8131033802915,
+            "lng": 77.1343105302915
+          },
+          "southwest": {
+            "lat": 28.8104054197085,
+            "lng": 77.13161256970848
+          }
+        }
+      },
+      "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/school-71.png",
+      "icon_background_color": "#7B9EB0",
+      "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/school_pinlet",
+      "name": "Admin Block, NIT DELHI",
+      "opening_hours": {
+        "open_now": false
+      },
+      "photos": [
+        {
+          "height": 3604,
+          "html_attributions": [
+            "<a href=\"https://maps.google.com/maps/contrib/110388421412076522518\">Aditya Kumar</a>"
+          ],
+          "photo_reference": "ATCDNfUDPVfgq9_PiKXxelNgXP2eIvRdAObRX0Y11CXpvYoj3s7ANvt7954kwp1gLlTPD-090c9OjW-v_x31yFXEx7rn1Z-WI3tuG-If8zPTaY-N8mF7vYYI5g0HULCHlm8Rly1-MK-V9rBRc4FmvKV8y09Ysa4m7MgrbE0FEylvYPy90B4aNBb7pu5hyhShwWC6TG92av_62ntDyVmenVKDhxTohkoSYE0Cst8VhzPo6ZwjiwCtnVbVnP0uvLu0473XY-4ROv9j5deUSK2hb-mG4geTN6l6rurKRVOGh9QoUUgqdohoXFH36-rI7R4ymy0gW-cLgF6StDGcRRgPdS_Ekx-JgVTRVjnj4YO7hRHT1i2mLkd3ucWmYuGQW62wggFQaQmev4D1KZjYtzfn2RXNI7dZwegqixpEqK5AuLzzzOr_vQ",
+          "width": 4800
+        }
+      ],
+      "place_id": "ChIJC3z2FsKrDTkRat9hClRIU3c",
+      "rating": 4.8,
+      "reference": "ChIJC3z2FsKrDTkRat9hClRIU3c",
+      "types": [
+        "establishment",
+        "point_of_interest",
+        "university"
+      ],
+      "user_ratings_total": 90
+    },
+    {
+      "business_status": "OPERATIONAL",
+      "formatted_address": "9GWM+QJ4, Gopalpur Alias Bidh, Punjab 144008, India",
+      "geometry": {
+        "location": {
+          "lat": 31.3968983,
+          "lng": 75.53407399999999
+        },
+        "viewport": {
+          "northeast": {
+            "lat": 31.3982497302915,
+            "lng": 75.5356858802915
+          },
+          "southwest": {
+            "lat": 31.3955517697085,
+            "lng": 75.53298791970848
+          }
+        }
+      },
+      "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/school-71.png",
+      "icon_background_color": "#7B9EB0",
+      "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/school_pinlet",
+      "name": "Department of Information Technology",
+      "opening_hours": {
+        "open_now": false
+      },
+      "place_id": "ChIJM40-OrdRGjkRGNo6FmpuWio",
+      "reference": "ChIJM40-OrdRGjkRGNo6FmpuWio",
+      "types": [
+        "establishment",
+        "point_of_interest"
+      ]
+    },
+    {
+      "business_status": "OPERATIONAL",
+      "formatted_address": "Administrative Block 2, Grand Trunk Rd, Punjab 144008, India",
+      "geometry": {
+        "location": {
+          "lat": 31.3957286,
+          "lng": 75.5371253
+        },
+        "viewport": {
+          "northeast": {
+            "lat": 31.3969855802915,
+            "lng": 75.5383341802915
+          },
+          "southwest": {
+            "lat": 31.3942876197085,
+            "lng": 75.53563621970848
+          }
+        }
+      },
+      "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/school-71.png",
+      "icon_background_color": "#7B9EB0",
+      "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/school_pinlet",
+      "name": "Department of civil engineering",
+      "opening_hours": {
+        "open_now": false
+      },
+      "photos": [
+        {
+          "height": 4096,
+          "html_attributions": [
+            "<a href=\"https://maps.google.com/maps/contrib/102819515657658018120\">Shakeel Rather</a>"
+          ],
+          "photo_reference": "ATCDNfWYEywZUeiJGofeYworrUJx9nBGoLMv-lI2vyoAlkuaZkWyxLxzX9AF7Z_MQ_RODUqKUQPMB2kK8NeCSsuPG7GCs5bT00LQ5aR50yKcAI1ZPGNCNFP17jBRB4FysfpPCQmyh730YGkuMI2dnzKXTqHXPHgX-MmA0wP1Kod_G3ORFMyZ_leY0Yk73BReiBLfhs7Gj1L58KDrecgzva43-TEtq0V4OD1MUhXO_GGR7d93OmiSawC4Q9a1FUKCmOQvX6def993RiXfmMSt50wGSIOBS7WPul-nNXO612CmQwf9Y5UvTaQeyyziolxMnOn-j4bwwDs_oiUKwUTcqeINXXxyEi7CIMk5EPywXvYOFgriGn_iLZttrIBY8Bbk1yenGX30ruePeoi9DDuallgoP7qPb1BMoY09xgI0_P1ybAsZ9h6t",
+          "width": 2304
+        }
+      ],
+      "place_id": "ChIJQZKp-tJRGjkR2KZuBWe8B1s",
+      "plus_code": {
+        "compound_code": "9GWP+7V Gopalpur Alias Bidh, Punjab, India",
+        "global_code": "8J3Q9GWP+7V"
+      },
+      "rating": 5,
+      "reference": "ChIJQZKp-tJRGjkR2KZuBWe8B1s",
+      "types": [
+        "establishment",
+        "point_of_interest"
+      ],
+      "user_ratings_total": 3
+    },
+    {
+      "business_status": "OPERATIONAL",
+      "formatted_address": "New Rasila Nagar, Basti Danishmanda, phase 2, Dilbagh Nagar, Jalandhar, Punjab 144002, India",
+      "geometry": {
+        "location": {
+          "lat": 31.3200934,
+          "lng": 75.5442253
+        },
+        "viewport": {
+          "northeast": {
+            "lat": 31.3214348302915,
+            "lng": 75.5455424802915
+          },
+          "southwest": {
+            "lat": 31.31873686970851,
+            "lng": 75.5428445197085
+          }
+        }
+      },
+      "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/generic_business-71.png",
+      "icon_background_color": "#13B5C7",
+      "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/generic_pinlet",
+      "name": "Nit-A Music Studio",
+      "opening_hours": {
+        "open_now": true
+      },
+      "photos": [
+        {
+          "height": 674,
+          "html_attributions": [
+            "<a href=\"https://maps.google.com/maps/contrib/102604363737957159307\">Nit-A Music Studio</a>"
+          ],
+          "photo_reference": "ATCDNfVMacrxwi15h9_ckOdm6O3RZ7OHJU_jc7acNRRf__JRgv7rrRT91igHqBye0mlxfxqXmdNtXGgnOnSEopNtnJN8ZymNyC6yL3OtcyF-piPn6E6bH-WjnhZDEY20BV7hW_eVMaOpACDqYjLuu1WdO71ctWfTkJi_glz3oL-ULMQxPRg_PnoaHvJWuu9XaykkAt2V5psZrSKirXOwHKPs_o_tUYXuUokezagScjWVNapl0BPljtBxEZrKueaqphia1KAYX74iOPl7WwId0GHzxl3zC_hEyYepTCdmfCRAj0uyLQ",
+          "width": 1200
+        }
+      ],
+      "place_id": "ChIJ5a-ae_dbGjkRKFteuDQNerU",
+      "plus_code": {
+        "compound_code": "8GCV+2M Jalandhar, Punjab, India",
+        "global_code": "8J3Q8GCV+2M"
+      },
+      "rating": 5,
+      "reference": "ChIJ5a-ae_dbGjkRKFteuDQNerU",
+      "types": [
+        "establishment",
+        "point_of_interest",
+        "school",
+        "store"
+      ],
+      "user_ratings_total": 153
+    }
+  ],
+  "status": "OK"
+}
