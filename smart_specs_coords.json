@@ -1,0 +1,37 @@
+{
+  "seminar hall nit jalandhar": {
+    "name": "Central Seminar Hall",
+    "lat": 31.396167499999997,
+    "lon": 75.5343117,
+    "address": "Gopalpur Alias Bidh, Punjab 144008, India",
+    "source": "cache"
+  },
+  "ahead i am listening, nit jalandhar, punjab, india": {
+    "name": "Dr B R Ambedkar National Institute of Technology Jalandhar",
+    "lat": 31.395874600000003,
+    "lon": 75.5358439,
+    "address": "Grand Trunk Road, Barnala - Amritsar Bypass Rd, Jalandhar, Gopalpur Alias Bidh, Punjab 144008, India",
+    "source": "cache"
+  },
+  "i am listen, nit jalandhar, punjab, india": {
+    "name": "Dr B R Ambedkar National Institute of Technology Jalandhar",
+    "lat": 31.395874600000003,
+    "lon": 75.5358439,
+    "address": "Grand Trunk Road, Barnala - Amritsar Bypass Rd, Jalandhar, Gopalpur Alias Bidh, Punjab 144008, India",
+    "source": "cache"
+  },
+  "director residence nit jalandhar": {
+    "name": "Dr B R Ambedkar National Institute of Technology Jalandhar",
+    "lat": 31.395874600000003,
+    "lon": 75.5358439,
+    "address": "Grand Trunk Road, Barnala - Amritsar Bypass Rd, Jalandhar, Gopalpur Alias Bidh, Punjab 144008, India",
+    "source": "cache"
+  },
+  "boys hostel 7 nit jalandhar": {
+    "name": "BH7",
+    "lat": 31.3993405,
+    "lon": 75.5368089,
+    "address": "",
+    "source": "overpass"
+  }
+}
