@@ -1,0 +1,880 @@
+{
+  "html_attributions": [],
+  "next_page_token": "ATCDNfU8BUnTx40ZOYP10MRjLig9P7NP0wVxDuHd29Ea9p0miTNVYcI7Y7IUYc4xJkxSUbZqP7n_UoyBX4b2K9M3XK-JbP2APRQcLIKPPNXMgKbEOO_of3BGAcg0PssMHJ1N_pHlNv3WngSYsiIcOhg6EyCPDR54zG-B0X5_ji3Wa5BJYfN9diAVo8RZILOSRZ3E0ILKjT1tgFT9qkvYVjtHaIeuUyQkCqamI49oHJ6dIsru3JgpERq0WeXfUSUCw1KduXwYISohZwf8pGQPkaPUhy6HT7WQPWODLBMfLCFa6Gv6krNMm_4Ee6iF1BQ8LSXEyked_ByZJuKNfGHiPRerky5fTKaKAcTF6NOcLP5oM6-F7X5gKMwdBXcr9c251dYh5Q6aAcDun2akO2MKZHs1pDpwUGycQ1SlP3WwW-aE46VbVaHW8dMnpc9Tc9eDMa9t0xTPfrkpz2EwL0TZJj4mvr4CgwNS1n3s1SbpXm20rEdSOMtx5twugxATOv9S-rhmwOz1YXnsCOJoyyNWMFPjHUrqGwcZ4sVpRZR_gT1Q7FJgcKUaLFq36cnW-_TAnOafpdL1mHorbcSBo-XIwgfTHpFu8JafgcBt__4Gcvv40P7uekyfCdCfD2NQwLICE_eGkXUBxFaRt4PwXnosyEEsjdYLzCdFrdScJXngRHMLIdAlIMX6xlLLKgdkLGzdxcys7mS5wbRjl0s_ibVcBQnJoPrc2Zq-DIqf6C3X0QPJR61a4JmOAyjhozQ6NMOKq9VasWUYrjb_EF9vkAYcrDTeJnVF7zT5N2re_BxCFe0sdBbsQh7U-TBQfkc7zAITX3p9LPQZ7zZGCb4",
+  "results": [
+    {
+      "business_status": "OPERATIONAL",
+      "formatted_address": "GR2W+F8J, Unnamed Road, Chak Gujran, Punjab 146022, India",
+      "geometry": {
+        "location": {
+          "lat": 31.50120879999999,
+          "lng": 75.845764
+        },
+        "viewport": {
+          "northeast": {
+            "lat": 31.50256228029149,
+            "lng": 75.8469869302915
+          },
+          "southwest": {
+            "lat": 31.49986431970849,
+            "lng": 75.84428896970849
+          }
+        }
+      },
+      "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/generic_business-71.png",
+      "icon_background_color": "#7B9EB0",
+      "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/generic_pinlet",
+      "name": "ADMIN BLOCK",
+      "opening_hours": {
+        "open_now": false
+      },
+      "photos": [
+        {
+          "height": 4800,
+          "html_attributions": [
+            "<a href=\"https://maps.google.com/maps/contrib/109541096817724970320\">ER.NAVDEEP SINGH</a>"
+          ],
+          "photo_reference": "ATCDNfWC3KDMphOh2K4odxRBkGDR8lWj1t-TLzXP7f-tDSWZpDLAAZTx57IbY18bio7tAfNEVqTtViauWXrZfGb_jv9IH9ARPP1Sio-iFl-Quw_jG_yMyGA4qbfWVFAqbmzaMkZKK5X4DCWNTkjWdfeQnbq72bEFAf-DCJUfIM08OBpnP3PjspcwNerXrm8g5bG8D9WkcoDkkk9YjUuMpJtEOOjaewdmB4YTw_ZpEHMPQfByBb3VGZCmDMl6U0mmXohYH83Aw3XOvv2FXoOzAF675E5P5AewRAYyI4DYMM4PfeIAKQK7Be4Us_UX0OXQ-XA1Xvhx9KMJsqy-dT9SWNNjb2dnqlVCZSVOHrsRiM61Ycxs9Om-AvF0HDNU5Gi41B8rAFlWPbSwtHbNc0aUg_JKiUhQljlA-xnvdzAVbpz-2KFehKc",
+          "width": 2700
+        }
+      ],
+      "place_id": "ChIJzydkNiT9GjkRykgv42IzqDc",
+      "rating": 4.8,
+      "reference": "ChIJzydkNiT9GjkRykgv42IzqDc",
+      "types": [
+        "establishment",
+        "point_of_interest"
+      ],
+      "user_ratings_total": 12
+    },
+    {
+      "business_status": "OPERATIONAL",
+      "formatted_address": "9F62+998, Punjabi University, Urban Estate Phase II, Urban Estate, Patiala, Chuharpur Araian, Punjab 147002, India",
+      "geometry": {
+        "location": {
+          "lat": 30.3609075,
+          "lng": 76.4509574
+        },
+        "viewport": {
+          "northeast": {
+            "lat": 30.3622832302915,
+            "lng": 76.4522827302915
+          },
+          "southwest": {
+            "lat": 30.35958526970851,
+            "lng": 76.4495847697085
+          }
+        }
+      },
+      "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/school-71.png",
+      "icon_background_color": "#7B9EB0",
+      "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/school_pinlet",
+      "name": "Admin Block",
+      "photos": [
+        {
+          "height": 3120,
+          "html_attributions": [
+            "<a href=\"https://maps.google.com/maps/contrib/112196686058371059081\">Jivan Randhawa (Jivan Randhawa)</a>"
+          ],
+          "photo_reference": "ATCDNfUmZiKH2tKFAK2cM8jl1Sa3K4sM5YTQyufECEpV5PLL1YfE7P0zhbjMOPjnG5fzTHj0mhduXZuvvhNitqrY20u_yviNuR5z5Z41gl3of8P_8MDaSrJfraEmKpz9wRWH_ahcJpsO2ciNc9xs4yVXmv6yfjn-hSFb1CzE6msr0iVXwTsG3ssdLchrDck0ODb3eosmd-2zKa_QNZDJ3WfKIelch6sUo87xqY6Qy0lNPgaxqoycorTlss3H5cfh5a3Zm7M6NKS3TWEJXiQkgGXaZN__8SURWJchNnhYBD_yuXApxAthNWntOTYNvy_VeuP8JzNFVaXacUugCWsEqBvzFKO2T--TfJlEL0-aezY6cyKNmNx19ZuC7-r53rt7fA2VpOMUMA-EWg7rswg7LtHw-zG9WdseY6fsfLQ-xiD0KE66-rsI",
+          "width": 4160
+        }
+      ],
+      "place_id": "ChIJ6d--gwMoEDkRwN2xJeeSDoA",
+      "rating": 3.3,
+      "reference": "ChIJ6d--gwMoEDkRwN2xJeeSDoA",
+      "types": [
+        "establishment",
+        "point_of_interest",
+        "university"
+      ],
+      "user_ratings_total": 353
+    },
+    {
+      "business_status": "OPERATIONAL",
+      "formatted_address": "RCF Main Road, Colony, Hussainpur, Rasulpur Chisty, Rawal, Punjab 144602, India",
+      "geometry": {
+        "location": {
+          "lat": 31.3158422,
+          "lng": 75.3382551
+        },
+        "viewport": {
+          "northeast": {
+            "lat": 31.3171971802915,
+            "lng": 75.3395383302915
+          },
+          "southwest": {
+            "lat": 31.3144992197085,
+            "lng": 75.3368403697085
+          }
+        }
+      },
+      "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/generic_business-71.png",
+      "icon_background_color": "#7B9EB0",
+      "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/generic_pinlet",
+      "name": "Admin Block, Rail Coach Factory, Kapurthala",
+      "opening_hours": {
+        "open_now": false
+      },
+      "photos": [
+        {
+          "height": 866,
+          "html_attributions": [
+            "<a href=\"https://maps.google.com/maps/contrib/100702966899656959817\">Admin Block, Rail Coach Factory, Kapurthala</a>"
+          ],
+          "photo_reference": "ATCDNfUfFjoapFruL6JlOn8n322cyX_T_jta9ZC4v4h2WA1wAGivC0_7mhwZCgrDYAkFEGOrNmmco8lRuPoyVFHjDYOTapO-_dGUx3DBSCYy7s3lQr9laGXYi7MeRmLqI2gs-Kmpc5a2WEJmix39mvbO-dor4FXyaGKr0hV73zel2lo-n3GgB6Q3oefxkqnJ3A98Z8qCvFbWq6VLd94N-C8vvgyX7bwaUhC7C5felq13v7og_X5riQVOf8r74C8uZ_GEpaH0n8aCgrRPwYug3kT3Y_qv_Xf8dd_bJl-VankiP6Rk7g",
+          "width": 1080
+        }
+      ],
+      "place_id": "ChIJw3fe0gc4GjkRSC9u5AgjWCc",
+      "plus_code": {
+        "compound_code": "888Q+88 Rasulpur Chisty, Punjab, India",
+        "global_code": "8J3Q888Q+88"
+      },
+      "rating": 4.3,
+      "reference": "ChIJw3fe0gc4GjkRSC9u5AgjWCc",
+      "types": [
+        "establishment",
+        "point_of_interest"
+      ],
+      "user_ratings_total": 163
+    },
+    {
+      "business_status": "OPERATIONAL",
+      "formatted_address": "Top floor, Administrative Block, Guru Nanak Dev University, Amritsar, Punjab 143005, India",
+      "geometry": {
+        "location": {
+          "lat": 31.6326716,
+          "lng": 74.8252925
+        },
+        "viewport": {
+          "northeast": {
+            "lat": 31.63403703029149,
+            "lng": 74.82680573029151
+          },
+          "southwest": {
+            "lat": 31.6313390697085,
+            "lng": 74.8241077697085
+          }
+        }
+      },
+      "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/school-71.png",
+      "icon_background_color": "#7B9EB0",
+      "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/school_pinlet",
+      "name": "Administration Block",
+      "opening_hours": {
+        "open_now": false
+      },
+      "photos": [
+        {
+          "height": 2926,
+          "html_attributions": [
+            "<a href=\"https://maps.google.com/maps/contrib/103214556769399524111\">Zevi Jhim</a>"
+          ],
+          "photo_reference": "ATCDNfWiJGA2x4qN-kbim8ZHbI4rzWvx5ZARtH44_NbhV5qfYYl5iEje73mHs46jQ5qGvnwa5EE1Dgpv_VEFdS98vVIIb8BdtiMCBZOP7aFHk9XykKbF1oUWTwtvhFuUyTZP7zpRBg1zDTvDZF_Zoe6on2X2m-gfZt2pMg0X2vgPXoyNZm-ZW20kp9FcCAWeVHTmDzqlSf6bzpdly8NZKLY_2dwQfi2Ss5mCq6_oOcga9qrO1XuuYmS1yIVEvoNOcl3nk54D3z7kSQpPExol-d5Rcxfopy-PBSqPNhs0xwQl2lRRwMRZJ8wpJh5EMB_1inpTyI0ZnHmSvi-n4LFEqgllq4WczRCYEbp54znGiX_ybfMnwfhaF5cgX0DAdO199QU_FHZXOVMyAaIHlk4UOVW7_HAMmWTzOFUeFf6S8YqMuJQDgBI",
+          "width": 3901
+        }
+      ],
+      "place_id": "ChIJX3bSbyhlGTkRxA9l28VbjvY",
+      "plus_code": {
+        "compound_code": "JRMG+34 Amritsar, Punjab, India",
+        "global_code": "8J3PJRMG+34"
+      },
+      "rating": 3.8,
+      "reference": "ChIJX3bSbyhlGTkRxA9l28VbjvY",
+      "types": [
+        "establishment",
+        "point_of_interest"
+      ],
+      "user_ratings_total": 287
+    },
+    {
+      "business_status": "OPERATIONAL",
+      "formatted_address": "punjab university, Quaid-i-Azam Campus, Lahore, Pakistan",
+      "geometry": {
+        "location": {
+          "lat": 31.5037536,
+          "lng": 74.30784609999999
+        },
+        "viewport": {
+          "northeast": {
+            "lat": 31.5050475302915,
+            "lng": 74.3092684302915
+          },
+          "southwest": {
+            "lat": 31.5023495697085,
+            "lng": 74.30657046970849
+          }
+        }
+      },
+      "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/cafe-71.png",
+      "icon_background_color": "#FF9E67",
+      "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/cafe_pinlet",
+      "name": "Admin Block Cafe",
+      "opening_hours": {
+        "open_now": true
+      },
+      "photos": [
+        {
+          "height": 3120,
+          "html_attributions": [
+            "<a href=\"https://maps.google.com/maps/contrib/118322952963845255225\">umair javed</a>"
+          ],
+          "photo_reference": "ATCDNfVckTStPQPH1sfJi3RwcMU3pq8VbE1PkIW8g5OZ7P8KYXaxweLMA5943vfy038iXmPu0TYAj8mq0fE_cEXhvvuJlGS2QG560aK3lGazmuxjlubEMUJhQOHv7iTE3WdJMn21WjCYzU34LQI4tp8yvZLOEoz1pPjdCAbHMTy_eNwK1CLMC15xi7G_VMOxWIfTqfHUtrYIVw5jjf_AsDPKZe_9WP4v00qdVsi0nrWMcLhBPNJykT_7kDIp6rjVVm1B0OqDtOBfEGV1TbMSLQdQSKO_cAWlYGZ1ct3dA6jFUtmQIES3jvz5Jpn1oqQo3LAyqqgG2nMSLxvGAwljVrTZZVDwV7UiBXAHbztcHPTe87djlGBr8P45peuksprb2eizFpO5S6ZqZDxr-Pz3mJI0EMNBfUYiDhQx-DGTzqXHll8",
+          "width": 4160
+        }
+      ],
+      "place_id": "ChIJEaxoO4YDGTkRWG3Lr1ue3rU",
+      "plus_code": {
+        "compound_code": "G835+G4 Lahore, Pakistan",
+        "global_code": "8J3PG835+G4"
+      },
+      "price_level": 1,
+      "rating": 3.9,
+      "reference": "ChIJEaxoO4YDGTkRWG3Lr1ue3rU",
+      "types": [
+        "cafe",
+        "establishment",
+        "food",
+        "point_of_interest"
+      ],
+      "user_ratings_total": 497
+    },
+    {
+      "business_status": "OPERATIONAL",
+      "formatted_address": "CRF6+62, Khiala, Punjab 144030, India",
+      "geometry": {
+        "location": {
+          "lat": 31.4231,
+          "lng": 75.81002
+        },
+        "viewport": {
+          "northeast": {
+            "lat": 31.4242554802915,
+            "lng": 75.8113700302915
+          },
+          "southwest": {
+            "lat": 31.4215575197085,
+            "lng": 75.80867206970849
+          }
+        }
+      },
+      "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/school-71.png",
+      "icon_background_color": "#7B9EB0",
+      "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/school_pinlet",
+      "name": "Administrative Block",
+      "photos": [
+        {
+          "height": 2515,
+          "html_attributions": [
+            "<a href=\"https://maps.google.com/maps/contrib/105595454816481533373\">Dawood Mughal</a>"
+          ],
+          "photo_reference": "ATCDNfVaBll1o0H4JjthE2RJ6-APMHEc_NhkDehA5K213-8cfhosCj2tORt7YmnKpsSQQaWApE5JtSpKAs8wSlV-ozYZxWkWlZmlMhkv3T5CiWCy6ubTJHlMdExoGYiFIWWJ3558ET-_hhSORa10RvttbtAc2py5gIVD1JXemFJDvrGoTfUZ8GaMKwQHlLxCt8fvc2j7WAMtUQDzcSltpwraVvLfAC2QE4WKiU0UlVW3v72CcMcOyVhE3gHKE8qzD8oJCYWowWiRcQTgwK9fU1nmbVew9gwqh_oczEdNSbxGh6dCvZVnhYWhGxose1JEy2jnlLXkIhuAj3bR-MDjZSdft3PR2g4GDKc1jHBNIWi5Oi0DCK9aW3btOjFv5n5xYi9mbQdz4wx7qFZ421hVsZ2j7L_AlcAmHYZYmlD1kPnlG7Flaug",
+          "width": 3562
+        }
+      ],
+      "place_id": "ChIJuf9fEBn7GjkRwuyFFf0T8qY",
+      "rating": 5,
+      "reference": "ChIJuf9fEBn7GjkRwuyFFf0T8qY",
+      "types": [
+        "establishment",
+        "point_of_interest"
+      ],
+      "user_ratings_total": 3
+    },
+    {
+      "business_status": "OPERATIONAL",
+      "formatted_address": "H8C7+266, Nila Gumbad Rd, Anarkali Bazaar Lahore, 54000, Pakistan",
+      "geometry": {
+        "location": {
+          "lat": 31.5700406,
+          "lng": 74.31301289999999
+        },
+        "viewport": {
+          "northeast": {
+            "lat": 31.5711100302915,
+            "lng": 74.3143255302915
+          },
+          "southwest": {
+            "lat": 31.5684120697085,
+            "lng": 74.31162756970849
+          }
+        }
+      },
+      "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/school-71.png",
+      "icon_background_color": "#7B9EB0",
+      "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/school_pinlet",
+      "name": "Administrative Block",
+      "opening_hours": {
+        "open_now": false
+      },
+      "photos": [
+        {
+          "height": 540,
+          "html_attributions": [
+            "<a href=\"https://maps.google.com/maps/contrib/107419468455196397156\">MAHMOOD AHMAD</a>"
+          ],
+          "photo_reference": "ATCDNfVeS4XwgriJiUA55YnQBZ3cwB07tub6NuAW5EyunNYF2Wy0_m6GUBKTiPsCWAKtyE2fhAFdtzERhL-Yi5Jn1clH6Xp0Eqfft9eHPUS4p1x-SEap2449kPxaKGrtfWF8WVgbfwcaH5L-JQUDpwvsNFotgVPRUrh7SqudqZIHbwJVBkQSZ1GykJ7nVfOOD86uTakc8ZUvZIXJkkSU9EfzjM8k0UcZp4tJ0aoSVNXwHTmo0cCsJlkcbr_M3MwLt25PYYy8yflmG9Rfu2hod41s2fDiZP8VV-GqhJPVwzh-Hkn5421-U7-TB6SjOsTi2SdEcPkp3Fzhqds8VTwb1Q1VQkKkfJMJbfBurpWVAl2Y4m_ivSeBxcaHsUimHNXvdC-liUvZJ3vMEHDCqOK39nu9cB4FzuX-hRxKQSEDWqALSzpzDQ",
+          "width": 720
+        }
+      ],
+      "place_id": "ChIJu30j9FcbGTkRt117L5D1Bt0",
+      "rating": 4.3,
+      "reference": "ChIJu30j9FcbGTkRt117L5D1Bt0",
+      "types": [
+        "establishment",
+        "point_of_interest"
+      ],
+      "user_ratings_total": 79
+    },
+    {
+      "business_status": "OPERATIONAL",
+      "formatted_address": "QQ59+459, Punjab University Rd, Panjab University, Sector 14, Chandigarh, 160014, India",
+      "geometry": {
+        "location": {
+          "lat": 30.7577833,
+          "lng": 76.76797289999999
+        },
+        "viewport": {
+          "northeast": {
+            "lat": 30.7589816302915,
+            "lng": 76.7694503802915
+          },
+          "southwest": {
+            "lat": 30.7562836697085,
+            "lng": 76.7667524197085
+          }
+        }
+      },
+      "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/school-71.png",
+      "icon_background_color": "#7B9EB0",
+      "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/school_pinlet",
+      "name": "Panjab University Administration Block",
+      "opening_hours": {
+        "open_now": false
+      },
+      "photos": [
+        {
+          "height": 480,
+          "html_attributions": [
+            "<a href=\"https://maps.google.com/maps/contrib/112028041395569517199\">Vaibhav Srivastava</a>"
+          ],
+          "photo_reference": "ATCDNfU508pX7b-CQSRwPZ6NZByaX1NjFPoahFdPR2jKSYDKEZI2bhbIM97EFnVWqHMtyQF1WD-1HAoCpRB0fuwze4lg7vQ9Mu-muzdL3pgwNJLkdUtCNS5woexFwvazglIdI1mviEwh8ipw2UojLh6c4YjxAxDE0BsQxZf51jdC1zF-ZozVcFG7KPOEDzvhrm3vAtMekYUulwGhHHcLqvG7FMneKWI4d8_t5WppSlS8MOXkIJ3RRzyVB6AhQqj-aR6otqN8hHvmYrelHd1WtQxR5InMdp0fxf8ddsNdDrTl2rcj_VahAF836u5OCslwZOL7ddzjCVFa6xmAHWCGBSgdqo255_7umliV-DQk79dFtwNz5riaJQpVslMvc4Fd3tEsLvtqPkuleWLRdRJLUCjOUhwEVMwFXQh0tvAf14hbP3vaYo_J",
+          "width": 640
+        }
+      ],
+      "place_id": "ChIJuefGVY_tDzkRqB1bkK4saqQ",
+      "rating": 3.2,
+      "reference": "ChIJuefGVY_tDzkRqB1bkK4saqQ",
+      "types": [
+        "establishment",
+        "point_of_interest"
+      ],
+      "user_ratings_total": 101
+    },
+    {
+      "business_status": "OPERATIONAL",
+      "formatted_address": "9MFM+RMW, Shahpur Kandi Twp, Tureti, Punjab 145029, India",
+      "geometry": {
+        "location": {
+          "lat": 32.376515,
+          "lng": 75.6843085
+        },
+        "viewport": {
+          "northeast": {
+            "lat": 32.3779390802915,
+            "lng": 75.6856611302915
+          },
+          "southwest": {
+            "lat": 32.3752411197085,
+            "lng": 75.68296316970849
+          }
+        }
+      },
+      "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/civic_building-71.png",
+      "icon_background_color": "#7B9EB0",
+      "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/civic-bldg_pinlet",
+      "name": "Administrative block",
+      "opening_hours": {
+        "open_now": false
+      },
+      "photos": [
+        {
+          "height": 4080,
+          "html_attributions": [
+            "<a href=\"https://maps.google.com/maps/contrib/117594407996990186857\">Pankaj Kumar</a>"
+          ],
+          "photo_reference": "ATCDNfVnb7aMSBFP_nJYrC-wHa61S7iPlFmQzPc4sHhlIxIoghaNm4a6NX-YgB8M9Xgv73amhQtvZZgtbtmV9ITEJAZFqTtrpXxxhgadpCvtkP9VQ6s7WmlWsWSnk71KKkA4RF-W3y_SB7x_dPAHWGy9NjGM97bMeHnHwX2YU3hqTEmvtl52uQfr9gQQvOYIjQF7AXQox_VXJ5BeEXLKszkVGG93EfR__M4MSsCuLACrCcocezSnEOyZS_BjqRh3UrADdKuoHOk5FW5xnuNtC1MQ3aIfcycVliUpJPMoxgbMfuS9cc2XVd_wJ6E0LwhauQusjzamJ4JMErFDrtrJXu1YijOqh7rJlXeZNTElm2DqyejT1uSGA7Czsd425zsa93pxbAtbtDZelAR4Uhyh2L2XniLtL19r5nC-P3GAOBYg8wjTAOh1",
+          "width": 3072
+        }
+      ],
+      "place_id": "ChIJC3cWUpR9HDkRe9TiLy98j-U",
+      "rating": 5,
+      "reference": "ChIJC3cWUpR9HDkRe9TiLy98j-U",
+      "types": [
+        "establishment",
+        "point_of_interest"
+      ],
+      "user_ratings_total": 2
+    },
+    {
+      "business_status": "OPERATIONAL",
+      "formatted_address": "722X+8PQ, MMU Road, Mullana, Haryana 133207, India",
+      "geometry": {
+        "location": {
+          "lat": 30.2508371,
+          "lng": 77.0493454
+        },
+        "viewport": {
+          "northeast": {
+            "lat": 30.2520707802915,
+            "lng": 77.05073518029151
+          },
+          "southwest": {
+            "lat": 30.2493728197085,
+            "lng": 77.04803721970849
+          }
+        }
+      },
+      "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/school-71.png",
+      "icon_background_color": "#7B9EB0",
+      "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/school_pinlet",
+      "name": "Mmdu admin block",
+      "opening_hours": {
+        "open_now": false
+      },
+      "photos": [
+        {
+          "height": 849,
+          "html_attributions": [
+            "<a href=\"https://maps.google.com/maps/contrib/117858654087987685843\">Prince Kumar</a>"
+          ],
+          "photo_reference": "ATCDNfXezgnG48Y_PSPaHIPBSV8siV0U7PdmSSF2TVJNzBdcRn0Q6emIq60s-_QE3RhzXWWoIyV-8ATAEtPeesiMPf4JNU6Nc_bcpVoY_VD8H-pfPNViswccCsOQAKKsrpPqtTskciLy-E7AFwRIR3yBJKQn_q3rObR18nQKuIHjrXbG1GY-lM3qwHZlv-Y6gsZ8uJEwot3sCCbnuTp7t32UTy5E1z_93NFU44eccVR_jiOJxoup1bqaoyBxQN5murNK4oZs8VvjqGnzSkS5tOiGWB-tHqMv2IZY5ZdPCK1XhdPbKVEDT2A58jCbcK0cbk4v19Ad-X4rrLNfuGriavtpOlla8BSg6iXKzzol7wviGdUCvXlnwu-IObmxHPWn-kOjXCx6_Ml8wkAElA7aprrrTW3J-u-NZclJF7kgQ-FvA-guTw",
+          "width": 1080
+        }
+      ],
+      "place_id": "ChIJsUJEEsutDzkRySXqwPhM0xQ",
+      "rating": 4.2,
+      "reference": "ChIJsUJEEsutDzkRySXqwPhM0xQ",
+      "types": [
+        "establishment",
+        "point_of_interest",
+        "university"
+      ],
+      "user_ratings_total": 24
+    },
+    {
+      "business_status": "OPERATIONAL",
+      "formatted_address": "PQ3C+XXF, GGDSD COLLEGE, 32C, Sector 32, Chandigarh, 160030, India",
+      "geometry": {
+        "location": {
+          "lat": 30.7049395,
+          "lng": 76.7724187
+        },
+        "viewport": {
+          "northeast": {
+            "lat": 30.7062479802915,
+            "lng": 76.7737750802915
+          },
+          "southwest": {
+            "lat": 30.7035500197085,
+            "lng": 76.7710771197085
+          }
+        }
+      },
+      "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/school-71.png",
+      "icon_background_color": "#7B9EB0",
+      "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/school_pinlet",
+      "name": "Admin Block",
+      "opening_hours": {
+        "open_now": false
+      },
+      "photos": [
+        {
+          "height": 768,
+          "html_attributions": [
+            "<a href=\"https://maps.google.com/maps/contrib/116540877455491720602\">Kartikeya Vashisth</a>"
+          ],
+          "photo_reference": "ATCDNfXAAFKBUarfGE9GdANXCdnWtoI12gzg60tvUdG95dZ_xAI_dutbq04EALKxEXf_-wyuQLRIcgUyr7gi3LCNKv5vUwnIJ7XXzRfnRf8vUgxOcWocRYYjK2RD-L8qYxTyhzxtuFwODT4fU-mNZLfjMRh31rl0676Dutly05OESGK1a1QWvQ4atr2CcBkcAcJzFYgQRTYdaed_O8sHoXnVRO1jXKyMNhA4ppsIQeqR6LSipLNZmk17ktzruT66l_P4Uh-7dvk9i-zQntO7XlMsgkwdCkOAghX4dhpj9bjLdYz2yTezTtNpHH_zz1d2fnz1oEK7riDWgSlKrUXVPl7D10au2zsAn9epmol9xpkpAnjrEuSw1oWhxy6WwQWEe9F7b_odJrL_zHcIRYQ6UIo7gKaKyhl3XwLUTktpYZW7nSj2CkJw",
+          "width": 1024
+        }
+      ],
+      "place_id": "ChIJx0ooS1rsDzkRvADA0YOqh9k",
+      "rating": 5,
+      "reference": "ChIJx0ooS1rsDzkRvADA0YOqh9k",
+      "types": [
+        "establishment",
+        "point_of_interest"
+      ],
+      "user_ratings_total": 1
+    },
+    {
+      "business_status": "OPERATIONAL",
+      "formatted_address": "888Q+C5C, Hussainpur, Rawal, Lodhi Bholana, Punjab 144602, India",
+      "geometry": {
+        "location": {
+          "lat": 31.3158055,
+          "lng": 75.337569
+        },
+        "viewport": {
+          "northeast": {
+            "lat": 31.3171307802915,
+            "lng": 75.3389218802915
+          },
+          "southwest": {
+            "lat": 31.3144328197085,
+            "lng": 75.33622391970849
+          }
+        }
+      },
+      "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/generic_business-71.png",
+      "icon_background_color": "#7B9EB0",
+      "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/generic_pinlet",
+      "name": "Admin Block Parking",
+      "photos": [
+        {
+          "height": 2304,
+          "html_attributions": [
+            "<a href=\"https://maps.google.com/maps/contrib/111121412172306508032\">Mera BHARAT Mahaan</a>"
+          ],
+          "photo_reference": "ATCDNfVNcaptHozVNZaf7QXnjrbF6kPUdiySq8RtBZFtHIW5MThd1xcUoOAhFpswwZIWFcv9OYRgescDtDFKwfZdEV1UF__4FukEdO2eGqhYSbajKMFjqEk_3hMWwQpFJQVXYVVyXDIimUgfxtr2r0agnxqXIVqcK13NVX3MrdlDGQfa8F3rkTKNZck9ZpOyt8iafvBt0ih5s1JkbFjRFhKbxxVwphhoGk-kuMk41gWmksfqCtaApGQ9ShWqcCyJ5JdS67REix8MnKnat3gWhyl-aIvStUmIfLIg0HkBdHzdcyzDe2at9RlMAlzMTPEBGARKm95BDOFT2aMAZaWfxNHpwlYTwI3ZIGLwNNT_173JSILc0oL2mxrNljeGLyrWIySW0Vpx8Ugoq8d5OS62uScK2Vkkitd81RB4-XjxrnQDcmDCD6VG",
+          "width": 4080
+        }
+      ],
+      "place_id": "ChIJfQFEcrA5GjkRfuSXOyDm5uQ",
+      "reference": "ChIJfQFEcrA5GjkRfuSXOyDm5uQ",
+      "types": [
+        "establishment",
+        "point_of_interest"
+      ]
+    },
+    {
+      "business_status": "OPERATIONAL",
+      "formatted_address": "5 University of Management & Technology Rd, Block C2 Block C 2 Phase 1 Johar Town, Lahore, 54770, Pakistan",
+      "geometry": {
+        "location": {
+          "lat": 31.4520124,
+          "lng": 74.2913837
+        },
+        "viewport": {
+          "northeast": {
+            "lat": 31.4532005802915,
+            "lng": 74.2927648802915
+          },
+          "southwest": {
+            "lat": 31.4505026197085,
+            "lng": 74.29006691970848
+          }
+        }
+      },
+      "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/generic_business-71.png",
+      "icon_background_color": "#7B9EB0",
+      "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/generic_pinlet",
+      "name": "UMT Admin Block",
+      "opening_hours": {
+        "open_now": false
+      },
+      "photos": [
+        {
+          "height": 1728,
+          "html_attributions": [
+            "<a href=\"https://maps.google.com/maps/contrib/112865801427797636213\">Wasi</a>"
+          ],
+          "photo_reference": "ATCDNfWLfprXAVoszpqhH8SN6zMKT7Bll1J7P_P5YGDG61wgf3fLWvOpz-BgtdQtPNekDyG02EJzYDQ6eXXCM43FjHKp7LWmj0i3H9stC5tsV-m0xXSOvgXNnLZeb99iJqyemHKDrXQ3e_Oz-puvFCVsi_42Z6fQ0_6wCHnkmil_nOXl8kg8qjlI3tj3ZzgEBwqpnj4P7Ki08Fifr6jskbWe23Znhk3bqFXq5SeloRLTvR5xygFAzaVN4pDxbaVAVp2NQcHUhZ4A_fGEj9j0dI9JtC8GF8B3Fy1utnCmjo9fNh-QZv4BbBzCKKRtGEZkqcCRRa580JpGTsMe9hsdrYozJYMEgw8MLatqUOi8_Lx1GQ-GudtuJ6Ci9CGfU0EqPx6jOMtt00B-V8gkFtoW-Fe75jADjG3toFpoJrYXrVHddDIdUQ",
+          "width": 3936
+        }
+      ],
+      "place_id": "ChIJpUuVykMBGTkRhHPL0FCabuw",
+      "plus_code": {
+        "compound_code": "F72R+RH Lahore, Pakistan",
+        "global_code": "8J3PF72R+RH"
+      },
+      "rating": 4.1,
+      "reference": "ChIJpUuVykMBGTkRhHPL0FCabuw",
+      "types": [
+        "establishment",
+        "lawyer",
+        "point_of_interest"
+      ],
+      "user_ratings_total": 300
+    },
+    {
+      "business_status": "OPERATIONAL",
+      "formatted_address": "G8QQ+XXC, Danepur Road, G.O.R. - I, Lahore, Pakistan",
+      "geometry": {
+        "location": {
+          "lat": 31.5399252,
+          "lng": 74.3399031
+        },
+        "viewport": {
+          "northeast": {
+            "lat": 31.5412741802915,
+            "lng": 74.34125208029151
+          },
+          "southwest": {
+            "lat": 31.5385762197085,
+            "lng": 74.33855411970849
+          }
+        }
+      },
+      "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/park-71.png",
+      "icon_background_color": "#4DB546",
+      "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/tree_pinlet",
+      "name": "Admin Block",
+      "place_id": "ChIJHX6vdAAFGTkRMhN2b73M04s",
+      "rating": 5,
+      "reference": "ChIJHX6vdAAFGTkRMhN2b73M04s",
+      "types": [
+        "establishment",
+        "park",
+        "point_of_interest"
+      ],
+      "user_ratings_total": 1
+    },
+    {
+      "business_status": "OPERATIONAL",
+      "formatted_address": "95XC+F62, Lahore, Pakistan",
+      "geometry": {
+        "location": {
+          "lat": 31.3986258,
+          "lng": 74.17052699999999
+        },
+        "viewport": {
+          "northeast": {
+            "lat": 31.4000511302915,
+            "lng": 74.1718768802915
+          },
+          "southwest": {
+            "lat": 31.3973531697085,
+            "lng": 74.16917891970849
+          }
+        }
+      },
+      "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/school-71.png",
+      "icon_background_color": "#7B9EB0",
+      "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/school_pinlet",
+      "name": "Admin Block",
+      "place_id": "ChIJO9RPjwf_GDkR73pDnVCgtQE",
+      "rating": 4.5,
+      "reference": "ChIJO9RPjwf_GDkR73pDnVCgtQE",
+      "types": [
+        "establishment",
+        "point_of_interest"
+      ],
+      "user_ratings_total": 4
+    },
+    {
+      "business_status": "OPERATIONAL",
+      "formatted_address": "PG5H+668, Hamirpur, Himachal Pradesh 177005, India",
+      "geometry": {
+        "location": {
+          "lat": 31.7080351,
+          "lng": 76.5280889
+        },
+        "viewport": {
+          "northeast": {
+            "lat": 31.7093399302915,
+            "lng": 76.5293858302915
+          },
+          "southwest": {
+            "lat": 31.7066419697085,
+            "lng": 76.5266878697085
+          }
+        }
+      },
+      "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/school-71.png",
+      "icon_background_color": "#7B9EB0",
+      "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/school_pinlet",
+      "name": "Admin Block",
+      "opening_hours": {
+        "open_now": false
+      },
+      "photos": [
+        {
+          "height": 3456,
+          "html_attributions": [
+            "<a href=\"https://maps.google.com/maps/contrib/116458133781191377206\">Bhawana yadav</a>"
+          ],
+          "photo_reference": "ATCDNfVi75m-n7yhlpeKe7tT5P4y5r2S6iJPh1vZsdib6EsgCmUUzFbfJB7k41ueszoiAFe5a4UKwiCrSARWzhLKRGopCI9b5gk-KvsdrCPxDQqDr19s5ng4n1JKzpVwVjNRsz9EZquyGw8k8oXI4uGCAN7kQqHKfeA69f1rR6ALkmbSvgVY2fkAtMf8DiAWng1TpnWnCa4VLnSmPXLeAkOvBso3z1VefjE9c6lwPrhR7cP_2HOOqDeSfGeFKZhqNoB447oB9i2fp8oU517fLFX7iB4t50SNl6pyDfnxrkKDPgp__jRXktn_3xLgSm8b9Gj9gUJeWX6ypQBZa5c4RLoNEYGm0124KQf0ZHiqf4Fy05MxTfdNea4GCJOUwqkc6fiVx3FPLrJOqfRagOd5jJv3vcoktQy7Y40_bqOqlM_nhXctCtZQ",
+          "width": 4608
+        }
+      ],
+      "place_id": "ChIJjz94_BTUBDkRQ2a0t7tCEbA",
+      "rating": 4.7,
+      "reference": "ChIJjz94_BTUBDkRQ2a0t7tCEbA",
+      "types": [
+        "establishment",
+        "point_of_interest"
+      ],
+      "user_ratings_total": 7
+    },
+    {
+      "business_status": "OPERATIONAL",
+      "formatted_address": "M7Q3+2JG, Unnamed Road, Pakistan",
+      "geometry": {
+        "location": {
+          "lat": 31.6875609,
+          "lng": 74.25406679999999
+        },
+        "viewport": {
+          "northeast": {
+            "lat": 31.6889550802915,
+            "lng": 74.2553511302915
+          },
+          "southwest": {
+            "lat": 31.6862571197085,
+            "lng": 74.2526531697085
+          }
+        }
+      },
+      "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/school-71.png",
+      "icon_background_color": "#7B9EB0",
+      "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/school_pinlet",
+      "name": "Admin Block, GCU KSK Campus",
+      "photos": [
+        {
+          "height": 2592,
+          "html_attributions": [
+            "<a href=\"https://maps.google.com/maps/contrib/108168376686113936088\">Waqas Khan</a>"
+          ],
+          "photo_reference": "ATCDNfUG3l0o5fEYGlUlSXQZZridnfjG4wWT6ZLnyBEKUx1kvd_STYsuON1oPvLOC8uBDB5C7KfyDPN3vC3FpljKGYNacwDBCG1OxOltJD-4FD5S7kbYCoMEw5Bucf5JAi0ffacVPEfZoOId1DtZQNOfUKzVkfjNa6kDediCT-31GCppv7eAx1-p1BTSsVE4pY7WsrNAlGJAv0M-qcus-0gRHjAjWY1qW6BrfXsks_LiFYs3hy6xyPARjROD-8xC6ncTDMN6YEu7kXte8-ncnWPO_jrN0TDXuJzxPEm9Awte0P6K5Oh63xRCv6bhq5eepGjlCrv-LasCoov4i5O3wd3wsF9R6Co-hapjLVgKmFWFoZd-aDdauwvtPfnTgtYzUGYK_yPiEAAO6IRpmGVw6JzeLoF6dATMVi3w0V6zXDpuVpLugofh",
+          "width": 4608
+        }
+      ],
+      "place_id": "ChIJM9hRqA8fGTkRnsCtr5hqN9c",
+      "rating": 5,
+      "reference": "ChIJM9hRqA8fGTkRnsCtr5hqN9c",
+      "types": [
+        "establishment",
+        "point_of_interest"
+      ],
+      "user_ratings_total": 3
+    },
+    {
+      "business_status": "OPERATIONAL",
+      "formatted_address": "96RR+28R, Lahore, Pakistan",
+      "geometry": {
+        "location": {
+          "lat": 31.3901154,
+          "lng": 74.2407649
+        },
+        "viewport": {
+          "northeast": {
+            "lat": 31.3913875802915,
+            "lng": 74.2420875802915
+          },
+          "southwest": {
+            "lat": 31.3886896197085,
+            "lng": 74.23938961970849
+          }
+        }
+      },
+      "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/school-71.png",
+      "icon_background_color": "#7B9EB0",
+      "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/school_pinlet",
+      "name": "University of Lahore Admin block",
+      "opening_hours": {
+        "open_now": false
+      },
+      "photos": [
+        {
+          "height": 4160,
+          "html_attributions": [
+            "<a href=\"https://maps.google.com/maps/contrib/100508044744779723333\">Ghulam Mustafa</a>"
+          ],
+          "photo_reference": "ATCDNfXcsTGdTEVYcqpGf1wXMZH9KE0VtCoyy5mb_p2atWggye53JKTIq70OtLVQEzlbwHcFO1xTmJ_lkPEMNYeoh-E5jHJPTz4o1v5qUIBlCnwESikNzvDT7CGCJz6XXQZ9ze-nOHkiYsPHE-1wHbpeCyEGmqSt8FeB2_ro7EwWA5mPNgkibzR7SQCCwxz_WtMGs0wQVuFIl4xueQto4wtdtZKN4nwnNSyViAx1sDwE5U_Q09-ctX2UdY5tLg2yb7Td2qsRc0vvi-M2w0N4ATBiAVbqZb5QQeeZR2NdOVBssCVhsgTInV6jUNDOD2a-OBd_Rk9QltY_ihk5D8PI2cGjebWFpC5vl7XhEI9FWNKn_9QAH2ILdDNrw-IiEnVoj9_fwa1tggqdz0UG3kn-AD4Zxk4h4VsfvWjZG14jJrsHjd8FtvCI",
+          "width": 3120
+        }
+      ],
+      "place_id": "ChIJN9QeyBQAGTkR7-94GQ7aM7A",
+      "rating": 4.1,
+      "reference": "ChIJN9QeyBQAGTkR7-94GQ7aM7A",
+      "types": [
+        "establishment",
+        "point_of_interest",
+        "university"
+      ],
+      "user_ratings_total": 43
+    },
+    {
+      "business_status": "OPERATIONAL",
+      "formatted_address": "1 Birdwood Road, Jinnah Town, Lahore, 54000, Pakistan",
+      "geometry": {
+        "location": {
+          "lat": 31.5489981,
+          "lng": 74.32404
+        },
+        "viewport": {
+          "northeast": {
+            "lat": 31.5504425302915,
+            "lng": 74.3251679802915
+          },
+          "southwest": {
+            "lat": 31.5477445697085,
+            "lng": 74.32247001970849
+          }
+        }
+      },
+      "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/civic_building-71.png",
+      "icon_background_color": "#7B9EB0",
+      "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/civic-bldg_pinlet",
+      "name": "Admin Block",
+      "photos": [
+        {
+          "height": 4000,
+          "html_attributions": [
+            "<a href=\"https://maps.google.com/maps/contrib/106777059405814649067\">Muhammad Bilal</a>"
+          ],
+          "photo_reference": "ATCDNfU2YKcXJq1zTDQbl3OSqlLGLrZ_A7wV_l5SoHTbZK1nwwzzXvflQkidx1rndA5QXT9XGic-q4c41otEd5DvS96sVecRay4ROfZgXAecIPnVi1mK5bEaD8SMzvL8OiICxniwpQuNDMapqn8cCDIDVlJJJn-xYaG3f2WL0XYP16kEL4iliHfTHregLFVR1RloOUXCzJPnPQC3QmeUFToAv7_M-KU86R7Kebci0NhwXDDt6Tp1ezFyCJKsEDDJh8T312jnkFn-WHx9QuR0sA-cFnUBlOIJ8qRgsUWmDAbQwx_6q8LLoaICaL9axHuME1rDvkgG2ifzAxFTRfFgG5-UOEQu9MwgYTeUcYQIwsA3Dpp1Xdif-Qp5ASqh3uzpVd5X9tW8gUVKz29ClYviudqlyneaXgQNQrx38ylHBAol0RLbA-Cj",
+          "width": 3000
+        }
+      ],
+      "place_id": "ChIJD8T5WVYFGTkRuIU1WqQej6g",
+      "plus_code": {
+        "compound_code": "G8XF+HJ Lahore, Pakistan",
+        "global_code": "8J3PG8XF+HJ"
+      },
+      "rating": 5,
+      "reference": "ChIJD8T5WVYFGTkRuIU1WqQej6g",
+      "types": [
+        "establishment",
+        "point_of_interest"
+      ],
+      "user_ratings_total": 1
+    },
+    {
+      "business_status": "OPERATIONAL",
+      "formatted_address": "3QV7+QWM, Unnamed Road, Pakistan",
+      "geometry": {
+        "location": {
+          "lat": 32.0944566,
+          "lng": 74.7647916
+        },
+        "viewport": {
+          "northeast": {
+            "lat": 32.09579823029151,
+            "lng": 74.76600658029149
+          },
+          "southwest": {
+            "lat": 32.09310026970851,
+            "lng": 74.76330861970848
+          }
+        }
+      },
+      "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/school-71.png",
+      "icon_background_color": "#7B9EB0",
+      "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/school_pinlet",
+      "name": "UET (NWL Campus) Admin Block",
+      "place_id": "ChIJ8clMafdNGTkRFCb62QQ1xfA",
+      "rating": 4.4,
+      "reference": "ChIJ8clMafdNGTkRFCb62QQ1xfA",
+      "types": [
+        "establishment",
+        "point_of_interest",
+        "university"
+      ],
+      "user_ratings_total": 5
+    }
+  ],
+  "status": "OK"
+}

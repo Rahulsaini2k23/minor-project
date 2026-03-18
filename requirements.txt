@@ -7,3 +7,5 @@ SpeechRecognition
 geopy
 PyAudio
 pyserial
+googlemaps
+python-dotenv

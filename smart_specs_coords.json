@@ -1,0 +1,65 @@
+{
+  "seminar hall nit jalandhar": {
+    "name": "Central Seminar Hall",
+    "lat": 31.396167499999997,
+    "lon": 75.5343117,
+    "address": "Gopalpur Alias Bidh, Punjab 144008, India",
+    "source": "cache"
+  },
+  "ahead i am listening, nit jalandhar, punjab, india": {
+    "name": "Dr B R Ambedkar National Institute of Technology Jalandhar",
+    "lat": 31.395874600000003,
+    "lon": 75.5358439,
+    "address": "Grand Trunk Road, Barnala - Amritsar Bypass Rd, Jalandhar, Gopalpur Alias Bidh, Punjab 144008, India",
+    "source": "cache"
+  },
+  "i am listen, nit jalandhar, punjab, india": {
+    "name": "Dr B R Ambedkar National Institute of Technology Jalandhar",
+    "lat": 31.395874600000003,
+    "lon": 75.5358439,
+    "address": "Grand Trunk Road, Barnala - Amritsar Bypass Rd, Jalandhar, Gopalpur Alias Bidh, Punjab 144008, India",
+    "source": "cache"
+  },
+  "director residence nit jalandhar": {
+    "name": "Dr B R Ambedkar National Institute of Technology Jalandhar",
+    "lat": 31.395874600000003,
+    "lon": 75.5358439,
+    "address": "Grand Trunk Road, Barnala - Amritsar Bypass Rd, Jalandhar, Gopalpur Alias Bidh, Punjab 144008, India",
+    "source": "cache"
+  },
+  "boys hostel 7 nit jalandhar": {
+    "name": "BH7",
+    "lat": 31.3993405,
+    "lon": 75.5368089,
+    "address": "",
+    "source": "cache"
+  },
+  "gymnasium nit jalandhar": {
+    "name": "New Gym NIT JALANDHAR",
+    "lat": 31.3967727,
+    "lon": 75.5341991,
+    "address": "NIT FITNESS CENTRE inside Dr B R Ambedkar National Institute of Technology Jalandhar G.T Road, Bypass, Amritsar, Jalandhar, Punjab 144008, India",
+    "source": "cache"
+  },
+  "bank nit jalandhar": {
+    "name": "Dr B R Ambedkar National Institute of Technology Jalandhar",
+    "lat": 31.395874600000003,
+    "lon": 75.5358439,
+    "address": "Grand Trunk Road, Barnala - Amritsar Bypass Rd, Jalandhar, Gopalpur Alias Bidh, Punjab 144008, India",
+    "source": "cache"
+  },
+  "open air theatre nit jalandhar": {
+    "name": "Lecture Theatre NIT Jalandhar",
+    "lat": 31.396776400000004,
+    "lon": 75.5373074,
+    "address": "Jalandhar, Punjab 144008, India",
+    "source": "cache"
+  },
+  "central library nit jalandhar": {
+    "name": "NITJ Library",
+    "lat": 31.396485000000002,
+    "lon": 75.535353,
+    "address": "National Insitute of Technology, Jalandhar, Gopalpur Alias Bidh, Punjab 144008, India",
+    "source": "google_places"
+  }
+}
