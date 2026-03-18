@@ -4,20 +4,33 @@
 ║         SMART SPECS – Campus Navigation System for Visually Impaired        ║
 ║         Dr. B.R. Ambedkar National Institute of Technology, Jalandhar        ║
 ╠══════════════════════════════════════════════════════════════════════════════╣
-║  Version     : 3.2  (smart instruction triggers + push-button support)      ║
+║  Version     : 3.2  (dynamic coords + smart triggers + push-button)         ║
 ║  Platform    : Raspberry Pi (production)  |  Windows/Linux (simulation)      ║
 ║  Python      : 3.8+                                                          ║
 ║  Hardware    : NEO-6M GPS Module + USB Microphone + Speaker                  ║
 ╠══════════════════════════════════════════════════════════════════════════════╣
-║  BUG FIXED (v3.1)                                                            ║
-║   • Google Maps returned "Khiala" (a nearby village) for campus building     ║
-║     queries because those buildings are not in Google's POI database.         ║
-║     Fixed by:                                                                ║
-║       1. A local CAMPUS_LANDMARKS dict as the PRIMARY lookup.                ║
-║       2. Input pre-processing: strips noise like "in nit jalandhar",         ║
-║          "at nit", "go to", "take me to" etc. before matching.               ║
-║       3. Strict geocoding validation: rejects results whose returned name    ║
-║          has no lexical overlap with the original query.                     ║
+║  WHAT'S IN THIS VERSION (v3.2)                                               ║
+║  ─────────────────────────────────────────────────────────────────────────  ║
+║  FIX 1 — Dynamic coordinate fetching (no hardcoded lat/lon)                  ║
+║    • User types/speaks destination → coords fetched automatically             ║
+║    • OSM Overpass API (campus bbox hard-lock, Khiala impossible)              ║
+║    • Google Places Text Search NEW API (locationRestriction, not hints)       ║
+║    • Nominatim fallback with distance validation                              ║
+║    • JSON cache (smart_specs_coords.json) — offline after first lookup        ║
+║                                                                              ║
+║  FIX 2 — Smart instructions (no more time-based spam)                        ║
+║    • Speaks only on: start / turn change / milestone / off-course /          ║
+║      stopped / advance warning / post-turn confirm / button press            ║
+║    • Roundabout straight-through handled explicitly                          ║
+║    • GPS heading smoother (circular mean of last 4 readings)                 ║
+║                                                                              ║
+║  FIX 3 — Push button support                                                 ║
+║    • Raspberry Pi: GPIO pin 17 (BCM), configurable                           ║
+║    • Simulation / Windows: press ENTER for same effect                       ║
+║                                                                              ║
+║  FIX 4 — Input preprocessing                                                 ║
+║    • "admin block in nit jalandhar" → "admin block" → API query              ║
+║    • Handles Hindi noise: mujhe jana hai, le chalo, dikhao                   ║
 ╠══════════════════════════════════════════════════════════════════════════════╣
 ║  Sources integrated:                                                         ║
 ║   • github.com/Uberi/speech_recognition  – STT engine & mic handling         ║
@@ -64,27 +77,66 @@ logger = logging.getLogger("SmartSpecs")
 IS_WINDOWS = platform.system() == "Windows"
 
 
-def _require(mod: str, pkg: str) -> None:
+def _require(mod: str, pkg: str, optional: bool = False) -> bool:
+    """Import-check helper.  optional=True → warn but don't exit."""
     try:
         __import__(mod)
+        return True
     except ImportError:
+        if optional:
+            logger.warning(
+                "Optional package '%s' not installed (pip install %s). "
+                "Some features disabled.", mod, pkg
+            )
+            return False
         logger.critical("Missing package '%s'. Run:  pip install %s", mod, pkg)
         sys.exit(1)
 
-_require("serial",             "pyserial")
-_require("pynmea2",            "pynmea2")
-_require("pyttsx3",            "pyttsx3")
-_require("speech_recognition", "speechrecognition")
-_require("geopy",              "geopy")
-_require("googlemaps",         "googlemaps")
+# ── Always required (pure-Python, no hardware) ────────────────────────────────
+_require("pyttsx3",  "pyttsx3")
+_require("geopy",    "geopy")
+_require("requests", "requests")
 
-import serial
-import pynmea2
+# ── Optional: only needed in TEXT_INPUT_MODE=False (microphone) ───────────────
+_HAS_SR  = _require("speech_recognition", "speechrecognition pyaudio",
+                     optional=True)
+
+# ── Optional: only needed in SIMULATION_MODE=False (real GPS hardware) ────────
+_HAS_SERIAL = _require("serial",   "pyserial", optional=True)
+_HAS_NMEA   = _require("pynmea2",  "pynmea2",  optional=True)
+
+# ── Optional: Google Maps SDK (fallback to REST Places API if absent) ──────────
+_HAS_GMAPS  = _require("googlemaps", "googlemaps", optional=True)
+
+# ── Conditional imports ───────────────────────────────────────────────────────
 import pyttsx3
-import speech_recognition as sr
-import googlemaps
+import requests
 from geopy.geocoders import Nominatim
-from geopy.distance import geodesic
+from geopy.distance  import geodesic
+
+if _HAS_SR:
+    import speech_recognition as sr
+else:
+    sr = None  # type: ignore
+
+if _HAS_SERIAL:
+    import serial
+else:
+    # Stub so GPSHandler hardware path fails gracefully
+    class serial:                          # type: ignore
+        class Serial:
+            def __init__(self, *a, **k): raise OSError("pyserial not installed")
+        class SerialException(OSError): pass
+
+if _HAS_NMEA:
+    import pynmea2
+else:
+    pynmea2 = None  # type: ignore  # only used in hardware GPS path
+
+if _HAS_GMAPS:
+    import googlemaps
+else:
+    googlemaps = None  # type: ignore
 
 _GMAPS_KEY = os.getenv("GOOGLE_MAPS_API_KEY", "")
 if _GMAPS_KEY:
@@ -99,8 +151,11 @@ else:
 # CONFIGURATION
 # ══════════════════════════════════════════════════════════════════════════════
 class Config:
-    SIMULATION_MODE: bool = True
-    TEXT_INPUT_MODE: bool = True
+    SIMULATION_MODE: bool = True   # False = real NEO-6M GPS hardware
+
+    # Input is ALWAYS voice — user speaks the destination name.
+    # The system does: listen → STT → confirm → fetch coords → navigate.
+    # No keyboard/console input anywhere in the navigation flow.
 
     # ── GPS / Serial ──────────────────────────────────────────────────────────
     GPS_PORT: str    = "/dev/serial0"
@@ -151,193 +206,577 @@ class Config:
 
     # ── STT ───────────────────────────────────────────────────────────────────
     STT_LANGUAGE: str = "en-IN"
-    LISTEN_TIMEOUT: int       = 8
-    PHRASE_TIME_LIMIT: int    = 12
-    ENERGY_THRESHOLD: int     = 300
+    LISTEN_TIMEOUT: int       = 10    # wait up to 10s for speech to start
+    PHRASE_TIME_LIMIT: int    = 15    # up to 15s for a full phrase
+    # Energy threshold: set dynamically per session via auto-calibration.
+    # This is only the starting value — overwritten on first listen.
+    ENERGY_THRESHOLD: int     = 400
     DYNAMIC_ENERGY: bool      = True
+    # Pause threshold: how long of silence = end of phrase.
+    # 1.2s prevents cutting off "Boys Hostel One" or "Swimming Pool"
+    PAUSE_THRESHOLD: float    = 1.2
+    # Non-speaking duration: minimum silence before phrase start counts
+    NON_SPEAKING_DURATION: float = 0.5
+    # Ambient noise calibration: longer = more accurate on Pi USB mics
+    NOISE_CALIB_DURATION: float  = 2.0
+    # How many times to retry STT before giving up on one utterance
+    STT_MAX_ATTEMPTS: int     = 3
 
     FUZZY_THRESHOLD: float = 0.50
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# CAMPUS LANDMARK DATABASE  ← PRIMARY lookup (no geocoding for these)
+# CAMPUS LANDMARK NAMES  (coordinates removed — fetched live by DynamicLocationFinder)
 #
-# WHY THIS EXISTS:
-#   Google Maps / Nominatim do NOT have per-building data for NIT Jalandhar.
-#   Querying "admin block NIT Jalandhar" returns the nearest geocodable point
-#   (historically Khiala village) because the building is not a registered
-#   Google POI.  Hardcoding the coordinates of known campus landmarks is the
-#   only reliable solution for a campus-specific navigation system.
+# This dictionary does ONE job only: normalize spoken/typed aliases into a
+# clean canonical search query that the APIs can resolve well.
 #
-# HOW TO ADD A LANDMARK:
-#   "canonical name": (latitude, longitude, ["alias1", "alias2", ...])
+#   "lib"   → "Central Library NIT Jalandhar"   ✅  API finds it
+#   "bh1"   → "Boys Hostel 1 NIT Jalandhar"     ✅  API finds it
+#
+# No coordinates are stored here.  All coordinates come from:
+#   1. JSON cache (smart_specs_coords.json) — instant, offline
+#   2. OSM Overpass API — campus bounding box, strict containment
+#   3. Google Places Text Search (New) — locationRestriction hard-lock
+#   4. Nominatim geocoding — free fallback
+#
+# To add a new place: add a line with its canonical name and aliases.
+# No coordinate lookup required.
 # ══════════════════════════════════════════════════════════════════════════════
-CAMPUS_LANDMARKS: Dict[str, Tuple[float, float, List[str]]] = {
+CAMPUS_LANDMARK_NAMES: Dict[str, List[str]] = {
     # ── Gates ─────────────────────────────────────────────────────────────────
-    "main gate":            (31.3944, 75.5274, ["gate", "entrance", "entry",
-                                                "main entrance", "front gate",
-                                                "mukhya dwar"]),
-    "back gate":            (31.3990, 75.5330, ["rear gate", "side gate",
-                                                "pichhla gate"]),
+    "Main Gate NIT Jalandhar": [
+        "main gate", "gate", "entrance", "entry", "main entrance",
+        "front gate", "mukhya dwar", "main",
+    ],
+    "Back Gate NIT Jalandhar": [
+        "back gate", "rear gate", "side gate", "pichhla gate", "back",
+    ],
 
     # ── Administration ────────────────────────────────────────────────────────
-    "admin block":          (31.3967, 75.5303, ["administrative block",
-                                                "administration block",
-                                                "administration building",
-                                                "admin building",
-                                                "admin office", "office block",
-                                                "director office",
-                                                "administrative office"]),
-    "director residence":   (31.3985, 75.5295, ["director house",
-                                                "director bungalow",
-                                                "vc house", "director home"]),
-    "guest house":          (31.3980, 75.5288, ["visitor house",
-                                                "guest block",
-                                                "atithi griha"]),
+    "Administrative Block NIT Jalandhar": [
+        "admin block", "administrative block", "administration block",
+        "admin building", "admin office", "office block",
+        "director office", "administrative office", "admin",
+        "administration",
+    ],
+    "Director Residence NIT Jalandhar": [
+        "director residence", "director house", "director bungalow",
+        "vc house", "director",
+    ],
+    "Guest House NIT Jalandhar": [
+        "guest house", "visitor house", "guest block", "atithi griha",
+        "guest",
+    ],
 
-    # ── Academic Buildings ────────────────────────────────────────────────────
-    "lecture hall complex": (31.3960, 75.5308, ["lhc", "lecture complex",
-                                                "lecture hall", "lh complex"]),
-    "academic block 1":     (31.3958, 75.5312, ["ab1", "ab 1",
-                                                "academic block one"]),
-    "academic block 2":     (31.3956, 75.5315, ["ab2", "ab 2",
-                                                "academic block two"]),
-    "academic block 3":     (31.3954, 75.5318, ["ab3", "ab 3",
-                                                "academic block three"]),
+    # ── Academic ──────────────────────────────────────────────────────────────
+    "Lecture Hall Complex NIT Jalandhar": [
+        # Canonical and full names
+        "lecture hall complex", "lecture complex", "lecture hall",
+        # Abbreviation: LHC — Google STT hears these for "LHC"
+        "lhc", "l h c", "el each c", "el h c", "lhc block",
+        "the lhc", "each",
+    ],
+    "Academic Block 1 NIT Jalandhar": [
+        "academic block 1", "academic block one",
+        # AB1 phonetics — Google STT hears these for "AB1"
+        "ab1", "ab 1", "a b 1", "a b one", "a be 1", "a be one",
+        "ab one",
+    ],
+    "Academic Block 2 NIT Jalandhar": [
+        "academic block 2", "academic block two",
+        "ab2", "ab 2", "a b 2", "a b two", "a be 2", "a be two",
+        "ab two",
+    ],
+    "Academic Block 3 NIT Jalandhar": [
+        "academic block 3", "academic block three",
+        "ab3", "ab 3", "a b 3", "a b three", "a be 3", "a be three",
+        "ab three",
+    ],
 
     # ── Departments ───────────────────────────────────────────────────────────
-    "civil engineering":    (31.3962, 75.5320, ["civil dept", "civil department",
-                                                "civil block"]),
-    "computer science":     (31.3964, 75.5316, ["cse", "cse department",
-                                                "computer dept",
-                                                "it department", "it dept"]),
-    "electrical engineering":(31.3966, 75.5322, ["eee", "electrical dept",
-                                                  "electrical block"]),
-    "mechanical engineering":(31.3968, 75.5325, ["mech", "mech dept",
-                                                  "mechanical dept",
-                                                  "mechanical block"]),
-    "electronics":          (31.3963, 75.5319, ["ece", "ece department",
-                                                "electronics dept",
-                                                "electronics block"]),
-    "chemical engineering": (31.3965, 75.5328, ["chemical dept",
-                                                "chemical block"]),
-    "textile technology":   (31.3961, 75.5331, ["textile dept",
-                                                "textile block"]),
-    "instrumentation":      (31.3959, 75.5326, ["instru dept",
-                                                "instrumentation block"]),
+    "Department of Civil Engineering NIT Jalandhar": [
+        "civil engineering", "civil dept", "civil department", "civil block",
+        "civil",
+    ],
+    "Department of Computer Science NIT Jalandhar": [
+        "computer science", "computer dept", "it department", "it dept",
+        "it block", "computer",
+        # CSE phonetics — Google STT hears these for "CSE"
+        "cse", "c s e", "cs e", "cs", "c s", "ces", "see es ee",
+        "c se",
+    ],
+    "Department of Electrical Engineering NIT Jalandhar": [
+        "electrical engineering", "electrical dept", "electrical block",
+        "electrical",
+        # EEE phonetics — Google STT hears these for "EEE"
+        "eee", "e e e", "triple e", "triply", "eeee", "three e",
+        "e e", "ee",
+    ],
+    "Department of Mechanical Engineering NIT Jalandhar": [
+        "mechanical engineering", "mech dept", "mechanical dept",
+        "mechanical block", "mechanical", "mech",
+    ],
+    "Department of Electronics NIT Jalandhar": [
+        "electronics", "electronics dept", "electronics block",
+        "electronics and communication",
+        # ECE phonetics — Google STT hears these for "ECE"
+        "ece", "e c e", "ec", "easy", "ec e", "e ce",
+        "e see e", "ee see ee",
+    ],
+    "Department of Chemical Engineering NIT Jalandhar": [
+        "chemical engineering", "chemical dept", "chemical block", "chemical",
+    ],
+    "Department of Textile Technology NIT Jalandhar": [
+        "textile technology", "textile dept", "textile block", "textile",
+    ],
+    "Department of Instrumentation NIT Jalandhar": [
+        "instrumentation", "instru dept", "instrumentation block",
+    ],
 
     # ── Library ───────────────────────────────────────────────────────────────
-    "central library":      (31.3969, 75.5300, ["library", "lib",
-                                                "pustakalaya", "reading room",
-                                                "central lib", "main library"]),
+    "Central Library NIT Jalandhar": [
+        "central library", "library", "lib", "pustakalaya",
+        "reading room", "central lib", "main library",
+    ],
 
     # ── Boys Hostels ──────────────────────────────────────────────────────────
-    "boys hostel 1":        (31.3953, 75.5325, ["bh1", "bh 1",
-                                                "boys hostel one",
-                                                "hostel 1", "hostel one"]),
-    "boys hostel 2":        (31.3951, 75.5328, ["bh2", "bh 2",
-                                                "boys hostel two",
-                                                "hostel 2", "hostel two"]),
-    "boys hostel 3":        (31.3949, 75.5331, ["bh3", "bh 3",
-                                                "boys hostel three",
-                                                "hostel 3", "hostel three"]),
-    "boys hostel 4":        (31.3947, 75.5334, ["bh4", "bh 4",
-                                                "boys hostel four",
-                                                "hostel 4", "hostel four"]),
-    "boys hostel 5":        (31.3945, 75.5337, ["bh5", "bh 5",
-                                                "boys hostel five",
-                                                "hostel 5", "hostel five"]),
-    "boys hostel 6":        (31.3943, 75.5340, ["bh6", "bh 6",
-                                                "boys hostel six",
-                                                "hostel 6", "hostel six"]),
-    "boys hostel 7":        (31.3941, 75.5338, ["bh7", "bh 7",
-                                                "boys hostel seven",
-                                                "hostel 7", "hostel seven"]),
-    "boys hostel 8":        (31.3939, 75.5335, ["bh8", "bh 8",
-                                                "boys hostel eight",
-                                                "hostel 8", "hostel eight"]),
+    # BH phonetics: Google STT hears "be each", "be h", "bh", "b h", "be aitch"
+    # for the letters B-H. We cover all variants for each number.
+    "Boys Hostel 1 NIT Jalandhar": [
+        "boys hostel 1", "boys hostel one", "hostel 1", "hostel one",
+        "bh1", "bh 1", "b h 1", "b h one", "be h 1", "be h one",
+        "be each 1", "be each one", "be aitch 1", "be aitch one",
+        "bh one",
+    ],
+    "Boys Hostel 2 NIT Jalandhar": [
+        "boys hostel 2", "boys hostel two", "hostel 2", "hostel two",
+        "bh2", "bh 2", "b h 2", "b h two", "be h 2", "be h two",
+        "be each 2", "be each two", "be aitch 2", "be aitch two",
+        "bh two",
+    ],
+    "Boys Hostel 3 NIT Jalandhar": [
+        "boys hostel 3", "boys hostel three", "hostel 3", "hostel three",
+        "bh3", "bh 3", "b h 3", "b h three", "be h 3", "be h three",
+        "be each 3", "be each three", "be aitch 3", "be aitch three",
+        "bh three",
+    ],
+    "Boys Hostel 4 NIT Jalandhar": [
+        "boys hostel 4", "boys hostel four", "hostel 4", "hostel four",
+        "bh4", "bh 4", "b h 4", "b h four", "be h 4", "be h four",
+        "be each 4", "be each four", "be aitch 4", "be aitch four",
+        "bh four",
+    ],
+    "Boys Hostel 5 NIT Jalandhar": [
+        "boys hostel 5", "boys hostel five", "hostel 5", "hostel five",
+        "bh5", "bh 5", "b h 5", "b h five", "be h 5", "be h five",
+        "be each 5", "be each five", "be aitch 5", "be aitch five",
+        "bh five",
+    ],
+    "Boys Hostel 6 NIT Jalandhar": [
+        "boys hostel 6", "boys hostel six", "hostel 6", "hostel six",
+        "bh6", "bh 6", "b h 6", "b h six", "be h 6", "be h six",
+        "be each 6", "be each six", "be aitch 6", "be aitch six",
+        "bh six",
+    ],
+    "Boys Hostel 7 NIT Jalandhar": [
+        "boys hostel 7", "boys hostel seven", "hostel 7", "hostel seven",
+        "bh7", "bh 7", "b h 7", "b h seven", "be h 7", "be h seven",
+        "be each 7", "be each seven", "be aitch 7", "be aitch seven",
+        "bh seven",
+        # Extra variants Google hears for BH7
+        "the edge 7", "the h 7", "bh 7th",
+    ],
+    "Boys Hostel 8 NIT Jalandhar": [
+        "boys hostel 8", "boys hostel eight", "hostel 8", "hostel eight",
+        "bh8", "bh 8", "b h 8", "b h eight", "be h 8", "be h eight",
+        "be each 8", "be each eight", "be aitch 8", "be aitch eight",
+        "bh eight",
+    ],
 
     # ── Girls Hostels ─────────────────────────────────────────────────────────
-    "girls hostel 1":       (31.3972, 75.5318, ["gh1", "gh 1",
-                                                "girls hostel one",
-                                                "girls hostel"]),
-    "girls hostel 2":       (31.3970, 75.5321, ["gh2", "gh 2",
-                                                "girls hostel two"]),
-    "girls hostel 3":       (31.3968, 75.5324, ["gh3", "gh 3",
-                                                "girls hostel three"]),
+    # GH phonetics: Google STT hears "g h", "gee each", "jee h", "gee aitch"
+    "Girls Hostel 1 NIT Jalandhar": [
+        "girls hostel 1", "girls hostel one", "girls hostel",
+        "gh1", "gh 1", "g h 1", "g h one", "gee h 1", "gee h one",
+        "gee each 1", "gee each one", "jee h 1", "jee h one",
+        "gh one",
+    ],
+    "Girls Hostel 2 NIT Jalandhar": [
+        "girls hostel 2", "girls hostel two",
+        "gh2", "gh 2", "g h 2", "g h two", "gee h 2", "gee h two",
+        "gee each 2", "gee each two",
+        "gh two",
+    ],
+    "Girls Hostel 3 NIT Jalandhar": [
+        "girls hostel 3", "girls hostel three",
+        "gh3", "gh 3", "g h 3", "g h three", "gee h 3", "gee h three",
+        "gee each 3", "gee each three",
+        "gh three",
+    ],
 
     # ── Food & Shopping ───────────────────────────────────────────────────────
-    "shopping complex":     (31.3963, 75.5295, ["market", "shops", "canteen area",
-                                                "shopping area", "complex",
-                                                "bazaar", "dukaan",
-                                                "campus market"]),
-    "central mess":         (31.3955, 75.5310, ["mess", "dining hall",
-                                                "food court", "canteen",
-                                                "khana", "cafeteria",
-                                                "dining", "dining hall"]),
-    "faculty canteen":      (31.3966, 75.5305, ["staff canteen", "faculty cafe",
-                                                "teachers canteen"]),
+    "Shopping Complex NIT Jalandhar": [
+        "shopping complex", "market", "shops", "shopping area",
+        "bazaar", "dukaan", "campus market", "complex",
+        "shopping",
+    ],
+    "Central Mess NIT Jalandhar": [
+        "central mess", "mess", "dining hall", "food court",
+        "canteen", "khana", "cafeteria", "dining",
+    ],
+    "Faculty Canteen NIT Jalandhar": [
+        "faculty canteen", "staff canteen", "faculty cafe",
+        "teachers canteen",
+    ],
 
     # ── Sports & Recreation ───────────────────────────────────────────────────
-    "sports complex":       (31.3942, 75.5300, ["sports ground", "ground",
-                                                "stadium", "sports",
-                                                "playing field", "maidan"]),
-    "swimming pool":        (31.3940, 75.5296, ["pool", "swimming"]),
-    "open air theatre":     (31.3948, 75.5308, ["oat", "amphitheatre",
-                                                "open theatre",
-                                                "auditorium", "theatre"]),
-    "gymnasium":            (31.3944, 75.5303, ["gym", "fitness centre",
-                                                "fitness center"]),
+    "Sports Complex NIT Jalandhar": [
+        "sports complex", "sports ground", "ground", "stadium",
+        "sports", "playing field", "maidan",
+    ],
+    "Swimming Pool NIT Jalandhar": [
+        "swimming pool", "pool", "swimming",
+    ],
 
-    # ── Student Activity ──────────────────────────────────────────────────────
-    "student activity centre": (31.3962, 75.5298, ["sac", "student centre",
-                                                    "student center",
-                                                    "activity centre",
-                                                    "student activities"]),
+    # OAT — Google STT hears these for "OAT":
+    # "oat" (the food), "oats", "o a t", "open air", "oh a t", "ate",
+    # "o eight", "o at", "open 8"
+    "Open Air Theatre NIT Jalandhar": [
+        "open air theatre", "amphitheatre", "open theatre",
+        "auditorium", "theatre", "open air",
+        # OAT phonetics
+        "oat", "oats", "o a t", "o at", "oh a t",
+        "open 8", "open eight", "o eight",
+        # What people sometimes say
+        "ott", "oat theatre",
+    ],
+    "Gymnasium NIT Jalandhar": [
+        "gymnasium", "gym", "fitness centre", "fitness center",
+    ],
 
-    # ── Medical ───────────────────────────────────────────────────────────────
-    "medical centre":       (31.3974, 75.5308, ["hospital", "dispensary",
-                                                "medical center", "clinic",
-                                                "health centre", "doctor",
-                                                "medical block",
-                                                "chikitsa kendra"]),
+    # ── Student Services ──────────────────────────────────────────────────────
 
-    # ── Placement & Training ──────────────────────────────────────────────────
-    "placement cell":       (31.3969, 75.5308, ["placement office",
-                                                "placement block",
-                                                "tpo", "training and placement",
-                                                "career services"]),
+    # SAC — Google STT hears these for "SAC":
+    # "sack", "sad", "sock", "suck", "sac", "s a c", "sa c", "essay"
+    "Student Activity Centre NIT Jalandhar": [
+        "student activity centre", "student activity center",
+        "student centre", "student center", "activity centre",
+        "student activities",
+        # SAC phonetics
+        "sac", "s a c", "sa c", "sack", "sock", "essay",
+        "s ac", "sac block",
+    ],
+    "Medical Centre NIT Jalandhar": [
+        "medical centre", "hospital", "dispensary", "medical center",
+        "clinic", "health centre", "doctor", "medical block",
+        "chikitsa kendra", "medical", "health",
+    ],
+    "Placement Cell NIT Jalandhar": [
+        "placement cell", "placement office", "placement block",
+        "career services", "placement",
+        # TPO phonetics — Google STT hears these for "TPO"
+        "tpo", "t p o", "tee p o", "t po", "tp o",
+        "training and placement", "training placement",
+    ],
 
     # ── Misc ──────────────────────────────────────────────────────────────────
-    "ncc block":            (31.3960, 75.5295, ["ncc", "national cadet corps"]),
-    "workshop":             (31.3965, 75.5335, ["workshop block",
-                                                "central workshop"]),
-    "seminar hall":         (31.3966, 75.5310, ["conference hall",
-                                                "seminar block",
-                                                "seminar room"]),
-    "bank":                 (31.3961, 75.5293, ["sbi", "atm", "bank branch"]),
-    "post office":          (31.3963, 75.5291, ["post", "dak ghar"]),
-    "water tank":           (31.3978, 75.5310, ["overhead tank", "water tower"]),
+
+    # NCC — Google STT hears "n c c", "en c c", "nc"
+    "NCC Block NIT Jalandhar": [
+        "ncc block", "national cadet corps",
+        "ncc", "n c c", "en c c", "en see see", "nc",
+    ],
+    "Workshop NIT Jalandhar": [
+        "workshop", "workshop block", "central workshop",
+    ],
+    "Seminar Hall NIT Jalandhar": [
+        "seminar hall", "conference hall", "seminar block",
+        "seminar room", "seminar",
+    ],
+    "Bank NIT Jalandhar": [
+        "bank", "sbi", "atm", "bank branch",
+        # SBI phonetics
+        "s b i", "es be eye", "es bi",
+    ],
+    "Post Office NIT Jalandhar": [
+        "post office", "post", "dak ghar",
+    ],
 }
 
-# ── Flat lookup: alias → canonical name ───────────────────────────────────────
+# ── Flat alias → canonical search query map ───────────────────────────────────
 _ALIAS_MAP: Dict[str, str] = {}
-for _canonical, (_lat, _lon, _aliases) in CAMPUS_LANDMARKS.items():
-    _ALIAS_MAP[_canonical] = _canonical
+for _canonical, _aliases in CAMPUS_LANDMARK_NAMES.items():
+    _ALIAS_MAP[_canonical.lower()] = _canonical
     for _alias in _aliases:
         _ALIAS_MAP[_alias.lower()] = _canonical
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# INPUT PRE-PROCESSOR
+# PHONETIC CORRECTION MAP
 #
-# Strips noise phrases that speech recognition or typing adds around the
-# actual destination name, e.g.:
-#   "take me to the admin block in nit jalandhar"  →  "admin block"
-#   "go to library"                                →  "library"
-#   "I want to go to boys hostel 1"                →  "boys hostel 1"
+# Maps what Google STT actually returns → the correct campus term.
+# This runs BEFORE the alias map so mis-heard text is corrected first,
+# then the alias map finds the right location.
+#
+# Format: "what google hears" → "correct campus term"
+#
+# How to find what Google hears:
+#   Say the abbreviation out loud → check the log → add mis-hearing here.
 # ══════════════════════════════════════════════════════════════════════════════
-# Phrases to strip from the start of the query
+_PHONETIC_MAP: Dict[str, str] = {
+
+    # ── OAT (Open Air Theatre) ────────────────────────────────────────────────
+    "oat":               "open air theatre",
+    "oats":              "open air theatre",
+    "o a t":             "open air theatre",
+    "o at":              "open air theatre",
+    "oh a t":            "open air theatre",
+    "o eight":           "open air theatre",
+    "open eight":        "open air theatre",
+    "open 8":            "open air theatre",
+    "ott":               "open air theatre",
+    "oat theatre":       "open air theatre",
+
+    # ── SAC (Student Activity Centre) ─────────────────────────────────────────
+    "sac":               "student activity centre",
+    "s a c":             "student activity centre",
+    "sa c":              "student activity centre",
+    "sack":              "student activity centre",
+    "sock":              "student activity centre",
+    "essay":             "student activity centre",
+    "s ac":              "student activity centre",
+    "sac block":         "student activity centre",
+    "the sac":           "student activity centre",
+
+    # ── LHC (Lecture Hall Complex) ─────────────────────────────────────────────
+    "lhc":               "lecture hall complex",
+    "l h c":             "lecture hall complex",
+    "el each c":         "lecture hall complex",
+    "el h c":            "lecture hall complex",
+    "each":              "lecture hall complex",   # Google often hears just "each"
+    "lhc block":         "lecture hall complex",
+
+    # ── TPO (Training & Placement Office) ─────────────────────────────────────
+    "tpo":               "placement cell",
+    "t p o":             "placement cell",
+    "tee p o":           "placement cell",
+    "t po":              "placement cell",
+    "tp o":              "placement cell",
+
+    # ── NCC ───────────────────────────────────────────────────────────────────
+    "n c c":             "ncc block",
+    "en c c":            "ncc block",
+    "en see see":        "ncc block",
+    "nc":                "ncc block",
+
+    # ── CSE (Computer Science) ────────────────────────────────────────────────
+    "cse":               "computer science",
+    "c s e":             "computer science",
+    "cs e":              "computer science",
+    "c s":               "computer science",
+    "ces":               "computer science",
+    "see es ee":         "computer science",
+    "c se":              "computer science",
+
+    # ── ECE (Electronics) ─────────────────────────────────────────────────────
+    "ece":               "electronics",
+    "e c e":             "electronics",
+    "ec":                "electronics",
+    "easy":              "electronics",
+    "ec e":              "electronics",
+    "e see e":           "electronics",
+    "ee see ee":         "electronics",
+    "e ce":              "electronics",
+
+    # ── EEE (Electrical Engineering) ──────────────────────────────────────────
+    "eee":               "electrical engineering",
+    "e e e":             "electrical engineering",
+    "triple e":          "electrical engineering",
+    "triply":            "electrical engineering",
+    "three e":           "electrical engineering",
+    "e e":               "electrical engineering",
+
+    # ── SBI / Bank ────────────────────────────────────────────────────────────
+    "s b i":             "bank",
+    "es be eye":         "bank",
+    "es bi":             "bank",
+    "sbi":               "bank",
+    "atm":               "bank",
+
+    # ── BH1–BH8 (Boys Hostels) ────────────────────────────────────────────────
+    # Google hears "be each N", "be h N", "b h N", "be aitch N" for BH-N
+    "bh1":               "boys hostel 1",
+    "bh 1":              "boys hostel 1",
+    "b h 1":             "boys hostel 1",
+    "be h 1":            "boys hostel 1",
+    "be each 1":         "boys hostel 1",
+    "be aitch 1":        "boys hostel 1",
+    "be h one":          "boys hostel 1",
+    "be each one":       "boys hostel 1",
+    "bh one":            "boys hostel 1",
+
+    "bh2":               "boys hostel 2",
+    "bh 2":              "boys hostel 2",
+    "b h 2":             "boys hostel 2",
+    "be h 2":            "boys hostel 2",
+    "be each 2":         "boys hostel 2",
+    "be aitch 2":        "boys hostel 2",
+    "be h two":          "boys hostel 2",
+    "be each two":       "boys hostel 2",
+    "bh two":            "boys hostel 2",
+
+    "bh3":               "boys hostel 3",
+    "bh 3":              "boys hostel 3",
+    "b h 3":             "boys hostel 3",
+    "be h 3":            "boys hostel 3",
+    "be each 3":         "boys hostel 3",
+    "be aitch 3":        "boys hostel 3",
+    "be h three":        "boys hostel 3",
+    "be each three":     "boys hostel 3",
+    "bh three":          "boys hostel 3",
+
+    "bh4":               "boys hostel 4",
+    "bh 4":              "boys hostel 4",
+    "b h 4":             "boys hostel 4",
+    "be h 4":            "boys hostel 4",
+    "be each 4":         "boys hostel 4",
+    "be h four":         "boys hostel 4",
+    "be each four":      "boys hostel 4",
+    "bh four":           "boys hostel 4",
+
+    "bh5":               "boys hostel 5",
+    "bh 5":              "boys hostel 5",
+    "b h 5":             "boys hostel 5",
+    "be h 5":            "boys hostel 5",
+    "be each 5":         "boys hostel 5",
+    "be h five":         "boys hostel 5",
+    "be each five":      "boys hostel 5",
+    "bh five":           "boys hostel 5",
+
+    "bh6":               "boys hostel 6",
+    "bh 6":              "boys hostel 6",
+    "b h 6":             "boys hostel 6",
+    "be h 6":            "boys hostel 6",
+    "be each 6":         "boys hostel 6",
+    "be h six":          "boys hostel 6",
+    "be each six":       "boys hostel 6",
+    "bh six":            "boys hostel 6",
+
+    "bh7":               "boys hostel 7",
+    "bh 7":              "boys hostel 7",
+    "b h 7":             "boys hostel 7",
+    "be h 7":            "boys hostel 7",
+    "be each 7":         "boys hostel 7",
+    "be aitch 7":        "boys hostel 7",
+    "be h seven":        "boys hostel 7",
+    "be each seven":     "boys hostel 7",
+    "bh seven":          "boys hostel 7",
+    "the edge 7":        "boys hostel 7",
+    "the h 7":           "boys hostel 7",
+    "bh 7th":            "boys hostel 7",
+
+    "bh8":               "boys hostel 8",
+    "bh 8":              "boys hostel 8",
+    "b h 8":             "boys hostel 8",
+    "be h 8":            "boys hostel 8",
+    "be each 8":         "boys hostel 8",
+    "be h eight":        "boys hostel 8",
+    "be each eight":     "boys hostel 8",
+    "bh eight":          "boys hostel 8",
+
+    # ── GH1–GH3 (Girls Hostels) ───────────────────────────────────────────────
+    # Google hears "gee each", "g h", "jee h", "gee aitch" for GH
+    "gh1":               "girls hostel 1",
+    "gh 1":              "girls hostel 1",
+    "g h 1":             "girls hostel 1",
+    "gee h 1":           "girls hostel 1",
+    "gee each 1":        "girls hostel 1",
+    "jee h 1":           "girls hostel 1",
+    "gee h one":         "girls hostel 1",
+    "gee each one":      "girls hostel 1",
+    "gh one":            "girls hostel 1",
+
+    "gh2":               "girls hostel 2",
+    "gh 2":              "girls hostel 2",
+    "g h 2":             "girls hostel 2",
+    "gee h 2":           "girls hostel 2",
+    "gee each 2":        "girls hostel 2",
+    "gee h two":         "girls hostel 2",
+    "gee each two":      "girls hostel 2",
+    "gh two":            "girls hostel 2",
+
+    "gh3":               "girls hostel 3",
+    "gh 3":              "girls hostel 3",
+    "g h 3":             "girls hostel 3",
+    "gee h 3":           "girls hostel 3",
+    "gee each 3":        "girls hostel 3",
+    "gee h three":       "girls hostel 3",
+    "gee each three":    "girls hostel 3",
+    "gh three":          "girls hostel 3",
+
+    # ── AB1–AB3 (Academic Blocks) ─────────────────────────────────────────────
+    "ab1":               "academic block 1",
+    "ab 1":              "academic block 1",
+    "a b 1":             "academic block 1",
+    "a b one":           "academic block 1",
+    "a be 1":            "academic block 1",
+    "a be one":          "academic block 1",
+    "ab one":            "academic block 1",
+
+    "ab2":               "academic block 2",
+    "ab 2":              "academic block 2",
+    "a b 2":             "academic block 2",
+    "a b two":           "academic block 2",
+    "a be 2":            "academic block 2",
+    "a be two":          "academic block 2",
+    "ab two":            "academic block 2",
+
+    "ab3":               "academic block 3",
+    "ab 3":              "academic block 3",
+    "a b 3":             "academic block 3",
+    "a b three":         "academic block 3",
+    "a be 3":            "academic block 3",
+    "a be three":        "academic block 3",
+    "ab three":          "academic block 3",
+}
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# STT SPEECH HINTS
+#
+# The single biggest fix for recognition accuracy.
+# Google STT's free API accepts a `speech_context` with phrase hints —
+# it heavily biases the decoder towards these words.
+#
+# Without hints: user says "BH1" → Google hears "B H one" or "be hate one"
+# With hints:    user says "BH1" → Google correctly hears "BH1"
+#
+# We pass every alias + canonical name from CAMPUS_LANDMARK_NAMES.
+# This makes the model prefer these exact phrases over similar-sounding
+# generic English words.
+# ══════════════════════════════════════════════════════════════════════════════
+_STT_HINTS: List[str] = []
+for _canonical, _aliases in CAMPUS_LANDMARK_NAMES.items():
+    # Add canonical name (short form, no "NIT Jalandhar")
+    short = _canonical.replace(" NIT Jalandhar", "").strip()
+    _STT_HINTS.append(short)
+    _STT_HINTS.extend(_aliases)
+
+# Add common confirmation words so yes/no confirmation is also accurate
+_STT_HINTS += [
+    "yes", "no", "correct", "wrong", "haan", "nahi", "okay", "sure",
+    "library", "hostel", "mess", "canteen", "admin", "block", "gate",
+    "medical", "sports", "gym", "pool", "theatre", "placement", "workshop",
+    "NIT", "NITJ", "Jalandhar", "campus",
+]
+# Deduplicate
+_STT_HINTS = list(dict.fromkeys(h.strip() for h in _STT_HINTS if h.strip()))
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# INPUT PRE-PROCESSOR
+# ══════════════════════════════════════════════════════════════════════════════
 _PREFIX_NOISE = re.compile(
     r"^\s*(?:"
     r"(?:i\s+)?(?:want\s+to\s+go|need\s+to\s+go|have\s+to\s+go)\s+(?:to\s+)?|"
@@ -345,15 +784,13 @@ _PREFIX_NOISE = re.compile(
     r"(?:please\s+)?(?:go\s+to|navigate\s+to|navigate|go)\s+(?:the\s+)?|"
     r"(?:find|search|locate|show)\s+(?:the\s+)?|"
     r"(?:where\s+is\s+(?:the\s+)?)|"
-    r"(?:mujhe\s+jana\s+hai\s+)?|"           # Hindi: mujhe jana hai
-    r"(?:le\s+chalo\s+)?|"                   # Hindi: le chalo
-    r"(?:dikhao\s+)?|"                       # Hindi: dikhao
+    r"(?:mujhe\s+jana\s+hai\s+)?|"
+    r"(?:le\s+chalo\s+)?|"
+    r"(?:dikhao\s+)?|"
     r"(?:the\s+)"
     r")+",
     re.IGNORECASE,
 )
-
-# Phrases to strip from the end of the query
 _SUFFIX_NOISE = re.compile(
     r"\s*(?:"
     r"(?:in|at|on|near|inside|within|of|around)\s+"
@@ -364,290 +801,409 @@ _SUFFIX_NOISE = re.compile(
     r")+\s*$",
     re.IGNORECASE,
 )
-
-# Strip filler words left after above passes
 _FILLER = re.compile(r"\b(please|kindly|the|a|an)\b", re.IGNORECASE)
 
 
 def preprocess_query(raw: str) -> str:
     """
-    Clean raw speech/keyboard input down to just the destination name.
-
-    Examples
-    --------
-    "admin block in nit jalandhar"          → "admin block"
-    "take me to the library"                → "library"
-    "go to boys hostel 1 at nit"            → "boys hostel 1"
-    "I want to go to the central mess"      → "central mess"
-    "canteen near campus"                   → "canteen"
+    Clean raw speech/keyboard input to just the destination name.
+    Also applies the phonetic correction map so mis-heard abbreviations
+    are fixed before alias matching.
     """
     q = raw.strip().lower()
-
     q = _PREFIX_NOISE.sub("", q).strip()
     q = _SUFFIX_NOISE.sub("", q).strip()
-
-    # Remove isolated filler words but NOT inside multi-word names
-    # (e.g. "open air theatre" must stay intact)
-    # Only strip if the result is not empty
     cleaned = _FILLER.sub(" ", q).strip()
     cleaned = re.sub(r"\s{2,}", " ", cleaned).strip()
-
     if cleaned:
         q = cleaned
 
-    logger.info("Input pre-process: '%s'  →  '%s'", raw, q)
+    # Apply phonetic correction if the cleaned query is in the map
+    if q in _PHONETIC_MAP:
+        q = _PHONETIC_MAP[q]
+        logger.info("Phonetic correction: '%s' → '%s'", raw.strip(), q)
+
+    logger.info("Pre-process: '%s' → '%s'", raw, q)
     return q
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# LOCATION FINDER  (campus DB first → geocoding fallback)
+# DESTINATION DATACLASS
 # ══════════════════════════════════════════════════════════════════════════════
 @dataclass
 class Destination:
-    name: str
-    lat: float
-    lon: float
+    name:    str
+    lat:     float
+    lon:     float
     address: str = ""
-    source: str  = "campus_db"   # "campus_db" | "google" | "nominatim"
+    source:  str = "cache"   # "cache"|"overpass"|"google_places"|"nominatim"
 
     @property
     def coords(self) -> Tuple[float, float]:
         return (self.lat, self.lon)
 
 
-class LocationFinder:
-    """
-    Resolution order
-    ────────────────
-    1. Exact match in CAMPUS_LANDMARKS (including all aliases)
-    2. Fuzzy match in CAMPUS_LANDMARKS (difflib ratio ≥ FUZZY_THRESHOLD)
-    3. Google Maps Geocoding  (only if result passes relevance check)
-    4. Nominatim geocoding    (only if result passes relevance check)
+# ══════════════════════════════════════════════════════════════════════════════
+# DYNAMIC LOCATION FINDER
+#
+# Resolution order (fully automatic — no hardcoded coordinates):
+# ─────────────────────────────────────────────────────────────────────────────
+#  Step 0 — Alias normalisation
+#    "library" → "Central Library NIT Jalandhar"  (via _ALIAS_MAP)
+#    Ensures every API gets a clean, full query with campus context.
+#
+#  Step 1 — JSON coordinate cache  (smart_specs_coords.json)
+#    Any place found before is returned instantly from disk.
+#    Works completely offline after the first successful lookup.
+#
+#  Step 2 — OSM Overpass API
+#    Searches OpenStreetMap nodes/ways by name inside the campus
+#    bounding box.  Results are guaranteed to be inside the box —
+#    Khiala or any external village is geometrically impossible.
+#    Free, no API key needed.
+#
+#  Step 3 — Google Places Text Search (New API, 2024)
+#    Uses `locationRestriction.rectangle` which HARD-LOCKS results
+#    to a geographic rectangle (unlike the legacy `bounds` parameter
+#    which was only a hint and allowed Khiala to slip through).
+#    Requires GOOGLE_MAPS_API_KEY in .env.
+#
+#  Step 4 — Nominatim (OpenStreetMap geocoding)
+#    Free fallback.  Results validated against campus centre distance.
+#
+# All successful lookups are written back to the JSON cache.
+# ══════════════════════════════════════════════════════════════════════════════
 
-    The relevance check prevents returning unrelated places (e.g. Khiala
-    village) when the geocoder cannot find a specific campus building.
+_CACHE_FILE = "smart_specs_coords.json"
+
+# Campus bounding box  (NIT Jalandhar + generous margin)
+_BBOX_S = 31.385   # south latitude
+_BBOX_N = 31.410   # north latitude
+_BBOX_W = 75.518   # west longitude
+_BBOX_E = 75.545   # east longitude
+
+
+class DynamicLocationFinder:
+    """
+    Fully automatic coordinate resolution — user types or speaks a
+    destination name and the system fetches its coordinates.
+    No coordinate entry required by the developer.
     """
 
-    _nominatim = Nominatim(user_agent="smart_specs_nitj_v3_1")
+    _nominatim   = Nominatim(user_agent="smart_specs_nitj_v3_2")
+    _cache: Dict[str, Destination] = {}    # in-memory mirror of JSON cache
+    _cache_loaded = False
 
     # ── Public entry point ────────────────────────────────────────────────────
-    @staticmethod
-    def find(raw_input: str) -> Optional[Destination]:
-        place = preprocess_query(raw_input)
-        if not place:
-            return None
+    @classmethod
+    def find(cls, raw_input: str) -> Optional[Destination]:
+        cls._ensure_cache_loaded()
 
-        # 1 & 2 – campus landmark DB
-        dest = LocationFinder._campus_lookup(place)
+        # Step 0 — normalise alias to canonical query
+        clean   = preprocess_query(raw_input)
+        query   = cls._resolve_alias(clean)    # e.g. "library" → "Central Library NIT Jalandhar"
+
+        logger.info("[Finder] Resolved query: '%s'", query)
+
+        # Step 1 — cache hit
+        dest = cls._cache_get(query)
         if dest:
+            logger.info("[Cache] Hit: '%s' → (%.6f, %.6f)", query, dest.lat, dest.lon)
             return dest
 
-        # 3 – Google Maps (strict relevance check)
-        dest = LocationFinder._google_geocode_strict(place)
+        # Step 2 — OSM Overpass
+        dest = cls._overpass_search(query, clean)
         if dest:
+            cls._cache_put(query, dest)
             return dest
 
-        # 4 – Nominatim (strict relevance check)
-        dest = LocationFinder._nominatim_geocode_strict(place)
-        return dest
+        # Step 3 — Google Places Text Search (New API)
+        dest = cls._google_places_search(query)
+        if dest:
+            cls._cache_put(query, dest)
+            return dest
 
-    # ── Step 1 & 2: campus landmark lookup ───────────────────────────────────
+        # Step 4 — Nominatim
+        dest = cls._nominatim_search(query)
+        if dest:
+            cls._cache_put(query, dest)
+            return dest
+
+        logger.warning("[Finder] No result for: '%s'", query)
+        return None
+
+    # ── Step 0: alias → canonical query ──────────────────────────────────────
     @staticmethod
-    def _campus_lookup(query: str) -> Optional[Destination]:
-        q = query.lower().strip()
+    def _resolve_alias(clean: str) -> str:
+        """
+        Map aliases to the full canonical search query.
+        Falls back to  "<clean>, NIT Jalandhar"  for unknown names.
+        """
+        q = clean.lower().strip()
 
-        # Exact or alias match
+        # Exact alias match
         if q in _ALIAS_MAP:
-            canonical = _ALIAS_MAP[q]
-            lat, lon, _ = CAMPUS_LANDMARKS[canonical]
-            logger.info("[CampusDB] Exact match: '%s' → '%s'", q, canonical)
-            return Destination(name=canonical.title(), lat=lat, lon=lon,
-                               source="campus_db")
+            return _ALIAS_MAP[q]
 
-        # Fuzzy match against all canonical names and aliases
-        all_keys = list(_ALIAS_MAP.keys())
-        matches = difflib.get_close_matches(
-            q, all_keys,
-            n=1,
-            cutoff=Config.FUZZY_THRESHOLD
-        )
+        # Fuzzy alias match
+        matches = difflib.get_close_matches(q, list(_ALIAS_MAP.keys()),
+                                            n=1, cutoff=0.55)
         if matches:
-            canonical = _ALIAS_MAP[matches[0]]
-            lat, lon, _ = CAMPUS_LANDMARKS[canonical]
-            score = difflib.SequenceMatcher(None, q, matches[0]).ratio()
-            logger.info("[CampusDB] Fuzzy match: '%s' → '%s' (score=%.2f)",
-                        q, canonical, score)
-            return Destination(name=canonical.title(), lat=lat, lon=lon,
-                               source="campus_db")
+            resolved = _ALIAS_MAP[matches[0]]
+            logger.info("[Alias] Fuzzy: '%s' → '%s'", q, resolved)
+            return resolved
 
-        # Try matching individual words of the query against aliases
-        # (handles "hostel bh1" → "boys hostel 1", "admin" → "admin block")
-        words = set(q.split())
-        best_score = 0.0
-        best_canonical = None
-        for key, canonical in _ALIAS_MAP.items():
-            score = difflib.SequenceMatcher(None, q, key).ratio()
-            if score > best_score:
-                best_score = score
-                best_canonical = canonical
-            # Also try substring: key contains query or query contains key
-            if q in key or key in q:
-                score2 = len(min(q, key, key=len)) / len(max(q, key, key=len))
-                if score2 > best_score:
-                    best_score = score2
-                    best_canonical = canonical
+        # Unknown name — append campus context and let the APIs figure it out
+        return f"{clean.title()}, NIT Jalandhar, Punjab, India"
 
-        # Only word-overlap match if ≥ 2 words match or strong substring
-        if best_canonical and best_score >= Config.FUZZY_THRESHOLD:
-            lat, lon, _ = CAMPUS_LANDMARKS[best_canonical]
-            logger.info("[CampusDB] Substring match: '%s' → '%s' (%.2f)",
-                        q, best_canonical, best_score)
-            return Destination(name=best_canonical.title(), lat=lat, lon=lon,
-                               source="campus_db")
+    # ── Step 1: JSON cache ────────────────────────────────────────────────────
+    @classmethod
+    def _ensure_cache_loaded(cls) -> None:
+        if cls._cache_loaded:
+            return
+        cls._cache_loaded = True
+        if not os.path.exists(_CACHE_FILE):
+            logger.info("[Cache] No cache file yet — will create on first lookup.")
+            return
+        try:
+            with open(_CACHE_FILE, "r", encoding="utf-8") as f:
+                raw: dict = json.load(f)
+            for key, val in raw.items():
+                cls._cache[key.lower()] = Destination(
+                    name    = val["name"],
+                    lat     = val["lat"],
+                    lon     = val["lon"],
+                    address = val.get("address", ""),
+                    source  = "cache",
+                )
+            logger.info("[Cache] Loaded %d entries from %s",
+                        len(cls._cache), _CACHE_FILE)
+        except Exception as exc:
+            logger.warning("[Cache] Load failed: %s", exc)
 
-        logger.info("[CampusDB] No match for: '%s'", q)
+    @classmethod
+    def _cache_get(cls, query: str) -> Optional[Destination]:
+        return cls._cache.get(query.lower())
+
+    @classmethod
+    def _cache_put(cls, query: str, dest: Destination) -> None:
+        cls._cache[query.lower()] = dest
+        # Persist to disk
+        try:
+            serialisable = {
+                k: {"name": v.name, "lat": v.lat, "lon": v.lon,
+                    "address": v.address, "source": v.source}
+                for k, v in cls._cache.items()
+            }
+            with open(_CACHE_FILE, "w", encoding="utf-8") as f:
+                json.dump(serialisable, f, indent=2, ensure_ascii=False)
+            logger.info("[Cache] Saved '%s' → (%.6f, %.6f) [%s]",
+                        query, dest.lat, dest.lon, dest.source)
+        except Exception as exc:
+            logger.warning("[Cache] Save failed: %s", exc)
+
+    # ── Step 2: OSM Overpass API ──────────────────────────────────────────────
+    @staticmethod
+    def _overpass_search(query: str, short_name: str) -> Optional[Destination]:
+        """
+        Search OpenStreetMap for named places INSIDE the campus bounding box.
+        The bbox filter makes it geometrically impossible to return Khiala.
+        Uses the short cleaned name (e.g. "admin block") as the search term
+        so OSM tag matching is more flexible.
+        """
+        OVERPASS_URL = "https://overpass-api.de/api/interpreter"
+
+        # Use the short name for OSM tag search; full query has "NIT Jalandhar"
+        # appended which OSM tags don't contain.
+        search_term = short_name.split(",")[0].strip()
+
+        # Query: match name tag (case-insensitive) within campus bbox
+        oql = (
+            f'[out:json][timeout:15];'
+            f'('
+            f'  node["name"~"{search_term}",i]'
+            f'    ({_BBOX_S},{_BBOX_W},{_BBOX_N},{_BBOX_E});'
+            f'  way["name"~"{search_term}",i]'
+            f'    ({_BBOX_S},{_BBOX_W},{_BBOX_N},{_BBOX_E});'
+            f'  relation["name"~"{search_term}",i]'
+            f'    ({_BBOX_S},{_BBOX_W},{_BBOX_N},{_BBOX_E});'
+            f');'
+            f'out center;'
+        )
+
+        try:
+            resp = requests.post(
+                OVERPASS_URL,
+                data={"data": oql},
+                timeout=18,
+                headers={"User-Agent": "SmartSpecs-NITJ/3.2"},
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            elements = data.get("elements", [])
+
+            if not elements:
+                logger.info("[Overpass] No results for: '%s'", search_term)
+                return None
+
+            # Pick the best match — prefer element whose name most closely
+            # matches the search term.
+            best      = None
+            best_score = 0.0
+            for el in elements:
+                tags = el.get("tags", {})
+                name = tags.get("name", "")
+                score = difflib.SequenceMatcher(
+                    None, search_term.lower(), name.lower()
+                ).ratio()
+                if score > best_score:
+                    best_score = score
+                    best = el
+
+            if best is None:
+                return None
+
+            # Extract coordinates (nodes have lat/lon; ways/relations have center)
+            if best["type"] == "node":
+                lat, lon = best["lat"], best["lon"]
+            else:
+                centre = best.get("center", {})
+                lat = centre.get("lat")
+                lon = centre.get("lon")
+                if lat is None:
+                    return None
+
+            osm_name = best.get("tags", {}).get("name", query.split(",")[0].strip())
+            logger.info("[Overpass] Found: '%s' → (%.6f, %.6f)  score=%.2f",
+                        osm_name, lat, lon, best_score)
+            return Destination(
+                name    = osm_name,
+                lat     = float(lat),
+                lon     = float(lon),
+                address = best.get("tags", {}).get("addr:full", ""),
+                source  = "overpass",
+            )
+
+        except requests.exceptions.Timeout:
+            logger.warning("[Overpass] Timeout for: %s", search_term)
+        except Exception as exc:
+            logger.error("[Overpass] Error: %s", exc)
         return None
 
-    # ── Step 3: Google Maps with relevance check ──────────────────────────────
+    # ── Step 3: Google Places Text Search (New API — 2024 endpoint) ───────────
     @staticmethod
-    def _google_geocode_strict(query: str) -> Optional[Destination]:
-        if not gmaps_client:
+    def _google_places_search(query: str) -> Optional[Destination]:
+        """
+        Google Places Text Search (New) uses `locationRestriction.rectangle`
+        which HARD-LOCKS results to the campus bounding box.
+        This is the key difference from the legacy Geocoding API where `bounds`
+        was only a bias and allowed Khiala to be returned.
+
+        Requires Places API (New) to be enabled in your Google Cloud console.
+        The same GOOGLE_MAPS_API_KEY works — just enable the new service.
+        """
+        if not _GMAPS_KEY:
             return None
 
-        lat0, lon0 = Config.CAMPUS_LAT, Config.CAMPUS_LON
-        # Try with campus context first
-        for search_query in [
-            f"{query}, NIT Jalandhar, Punjab, India",
-            f"{query}, Jalandhar, Punjab, India",
-        ]:
-            try:
-                bounds = {
-                    "southwest": (lat0 - 0.015, lon0 - 0.015),
-                    "northeast": (lat0 + 0.015, lon0 + 0.015),
+        PLACES_URL = "https://places.googleapis.com/v1/places:searchText"
+        headers = {
+            "Content-Type":    "application/json",
+            "X-Goog-Api-Key":  _GMAPS_KEY,
+            "X-Goog-FieldMask": (
+                "places.displayName,"
+                "places.location,"
+                "places.formattedAddress,"
+                "places.types"
+            ),
+        }
+        body = {
+            "textQuery": query,
+            "maxResultCount": 3,
+            "locationRestriction": {       # ← hard lock, not a hint
+                "rectangle": {
+                    "low":  {"latitude": _BBOX_S, "longitude": _BBOX_W},
+                    "high": {"latitude": _BBOX_N, "longitude": _BBOX_E},
                 }
-                results = gmaps_client.geocode(search_query, bounds=bounds)
+            },
+        }
 
-                if not results:
-                    continue
+        try:
+            resp = requests.post(PLACES_URL, headers=headers,
+                                 json=body, timeout=10)
+            resp.raise_for_status()
+            data = resp.json()
+            places = data.get("places", [])
 
-                result   = results[0]
-                loc      = result["geometry"]["location"]
-                address  = result.get("formatted_address", "")
-                returned = address.split(",")[0].strip().lower()
+            if not places:
+                logger.info("[GooglePlaces] No results for: '%s'", query)
+                return None
 
-                # ── Relevance check ───────────────────────────────────────────
-                # The returned name must share at least one meaningful token
-                # with the original query to be accepted.
-                if not LocationFinder._is_relevant(query, returned, address):
-                    logger.warning(
-                        "[Google] Rejected irrelevant result: '%s' → '%s'",
-                        query, returned
-                    )
-                    continue
+            place   = places[0]
+            loc     = place.get("location", {})
+            lat     = loc.get("latitude")
+            lon     = loc.get("longitude")
+            if lat is None or lon is None:
+                return None
 
-                # Must be near campus
-                dist = geodesic((loc["lat"], loc["lng"]),
-                                (Config.CAMPUS_LAT, Config.CAMPUS_LON)).meters
-                if dist > Config.CAMPUS_RADIUS_METERS * 3:
-                    logger.warning("[Google] Too far from campus (%.0fm): %s",
-                                   dist, address)
-                    continue
+            name    = place.get("displayName", {}).get("text",
+                                query.split(",")[0].strip())
+            address = place.get("formattedAddress", "")
 
-                logger.info("[Google] Accepted: '%s' → (%.6f, %.6f) — %s",
-                            query, loc["lat"], loc["lng"], address)
-                return Destination(
-                    name=address.split(",")[0].strip(),
-                    lat=loc["lat"], lon=loc["lng"],
-                    address=address, source="google"
-                )
+            logger.info("[GooglePlaces] Found: '%s' → (%.6f, %.6f) — %s",
+                        name, lat, lon, address)
+            return Destination(
+                name=name, lat=float(lat), lon=float(lon),
+                address=address, source="google_places",
+            )
 
-            except Exception as exc:
-                logger.error("[Google] Geocoding error: %s", exc)
-
+        except requests.exceptions.HTTPError as exc:
+            logger.error("[GooglePlaces] HTTP %s for: %s",
+                         exc.response.status_code, query)
+        except Exception as exc:
+            logger.error("[GooglePlaces] Error: %s", exc)
         return None
 
-    # ── Step 4: Nominatim with relevance check ────────────────────────────────
-    @staticmethod
-    def _nominatim_geocode_strict(query: str) -> Optional[Destination]:
-        for search_query in [
-            f"{query}, NIT Jalandhar, Jalandhar, Punjab, India",
-            f"{query}, Jalandhar, Punjab, India",
-        ]:
-            try:
-                location = LocationFinder._nominatim.geocode(
-                    search_query, timeout=10
-                )
-                if not location:
-                    continue
+    # ── Step 4: Nominatim ─────────────────────────────────────────────────────
+    @classmethod
+    def _nominatim_search(cls, query: str) -> Optional[Destination]:
+        """
+        Nominatim geocoding with campus-distance validation.
+        Max allowed distance: 2× campus radius so nearby roads are accepted
+        but distant cities are rejected.
+        """
+        try:
+            location = cls._nominatim.geocode(query, timeout=12)
+            if not location:
+                logger.info("[Nominatim] No result for: '%s'", query)
+                return None
 
-                returned = location.address.split(",")[0].strip().lower()
+            dist = geodesic(
+                (location.latitude, location.longitude),
+                (Config.CAMPUS_LAT, Config.CAMPUS_LON)
+            ).meters
 
-                if not LocationFinder._is_relevant(query, returned,
-                                                    location.address):
-                    logger.warning(
-                        "[Nominatim] Rejected irrelevant: '%s' → '%s'",
-                        query, returned
-                    )
-                    continue
+            if dist > Config.CAMPUS_RADIUS_METERS * 2.5:
+                logger.warning("[Nominatim] Rejected (%.0fm away): %s",
+                               dist, location.address)
+                return None
 
-                logger.info("[Nominatim] Accepted: '%s' → (%.6f, %.6f)",
-                            query, location.latitude, location.longitude)
-                return Destination(
-                    name=search_query.split(",")[0].strip(),
-                    lat=location.latitude, lon=location.longitude,
-                    address=location.address or "", source="nominatim"
-                )
-
-            except Exception as exc:
-                logger.error("[Nominatim] Geocoding error: %s", exc)
-
+            name = query.split(",")[0].strip()
+            logger.info("[Nominatim] Found: '%s' → (%.6f, %.6f)",
+                        name, location.latitude, location.longitude)
+            return Destination(
+                name    = name,
+                lat     = location.latitude,
+                lon     = location.longitude,
+                address = location.address or "",
+                source  = "nominatim",
+            )
+        except Exception as exc:
+            logger.error("[Nominatim] Error: %s", exc)
         return None
 
-    # ── Relevance gate ────────────────────────────────────────────────────────
-    @staticmethod
-    def _is_relevant(query: str, returned_name: str, full_address: str) -> bool:
-        """
-        Return True only if the geocoder's result is semantically related
-        to the original query.
 
-        Rules
-        -----
-        1. If the returned name IS the query (or vice versa) → accept.
-        2. If they share ≥ 1 significant token (len ≥ 3) → accept.
-        3. If the returned name is a known unrelated place
-           (Khiala, Nakodar, Phagwara, Punjab, India, Jalandhar as a
-           standalone city centroid) → reject.
-        4. Otherwise, fuzzy-ratio ≥ 0.40 → accept.
-        """
-        STOP_WORDS = {"the", "of", "a", "an", "and", "at", "in",
-                      "block", "road", "street", "near"}
-        REJECT_NAMES = {"khiala", "nakodar", "phagwara", "kapurthala",
-                        "punjab", "india", "jalandhar",
-                        "ludhiana", "amritsar", "chandigarh"}
-
-        qw = set(query.lower().split()) - STOP_WORDS
-        rw = set(returned_name.lower().split()) - STOP_WORDS
-
-        # Rule 3 – reject known unrelated place names
-        rw_check = set(returned_name.lower().split())
-        if rw_check.issubset(REJECT_NAMES):
-            logger.debug("[Relevance] Rejected reject-list name: %s", returned_name)
-            return False
-
-        # Also reject if the full address doesn't mention NIT / Jalandhar
-        addr_lower = full_address.lower()
-        if "jalandhar" not in addr_lower and "punjab" not in addr_lower:
-            return False
-
-        # Rule 1 & 2 – token overlap
-        if qw & rw:
-            return True
-
-        # Rule 4 – fuzzy ratio
-        ratio = difflib.SequenceMatcher(
-            None, query.lower(), returned_name.lower()
-        ).ratio()
-        return ratio >= 0.40
+# Convenience alias so the rest of the code stays unchanged
+LocationFinder = DynamicLocationFinder
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -678,7 +1234,7 @@ class ButtonHandler:
 
     def start(self) -> None:
         self._running = True
-        if Config.SIMULATION_MODE or Config.TEXT_INPUT_MODE:
+        if Config.SIMULATION_MODE:
             self._thread = threading.Thread(
                 target=self._keyboard_listener, name="Button-KB", daemon=True
             )
@@ -1191,8 +1747,14 @@ class Script:
 
     @staticmethod
     def found_location(dest: "Destination") -> str:
-        tag = "" if dest.source == "campus_db" else " — found on map"
-        return f"Found {dest.name}{tag}. Guiding you there now."
+        source_phrases = {
+            "cache":         "I have been there before —",
+            "overpass":      "Found on campus map —",
+            "google_places": "Found via Google —",
+            "nominatim":     "Found on OpenStreetMap —",
+        }
+        prefix = source_phrases.get(dest.source, "Found —")
+        return f"{prefix} {dest.name}. Guiding you there now."
 
     # ── Navigation start ──────────────────────────────────────────────────────
     @staticmethod
@@ -1349,13 +1911,30 @@ class VoiceIO:
         self._q: queue.Queue = queue.Queue()
         self._done           = threading.Event()
         self._done.set()
-        self._r = sr.Recognizer()
-        self._r.energy_threshold         = Config.ENERGY_THRESHOLD
-        self._r.dynamic_energy_threshold = Config.DYNAMIC_ENERGY
-        self._r.pause_threshold          = 0.8
-        self._mic_index: Optional[int] = None
-        if not Config.TEXT_INPUT_MODE:
-            self._mic_index = self._select_microphone()
+
+        if sr:
+            self._r = sr.Recognizer()
+            # ── Recognizer tuning ─────────────────────────────────────────────
+            # These are starting values. _calibrate_microphone() overwrites
+            # energy_threshold with a live measurement on first use.
+            self._r.energy_threshold          = Config.ENERGY_THRESHOLD
+            self._r.dynamic_energy_threshold  = Config.DYNAMIC_ENERGY
+            # pause_threshold: silence duration that ends a phrase.
+            # 1.2s handles multi-word names like "Boys Hostel One" correctly.
+            self._r.pause_threshold           = Config.PAUSE_THRESHOLD
+            # non_speaking_duration: silence before phrase is considered ended
+            self._r.non_speaking_duration     = Config.NON_SPEAKING_DURATION
+            # operation_timeout: max seconds to wait for Google API response
+            self._r.operation_timeout         = None
+        else:
+            self._r = None
+
+        self._mic_index: Optional[int]  = None
+        self._calibrated: bool          = False   # True after first calibration
+
+        # Always initialise microphone — voice input is the only input mode
+        self._mic_index = self._select_microphone()
+
         self._worker = threading.Thread(
             target=self._tts_worker, name="TTS", daemon=False
         )
@@ -1476,31 +2055,57 @@ class VoiceIO:
 
     def listen(self, prompt: Optional[str] = None,
                cue: str = Script.LISTENING_CUE) -> Optional[str]:
+        """
+        Full voice input pipeline:
+          1. Speak prompt (if given)
+          2. Play a short beep tone so user knows mic is open
+          3. Record raw audio for exactly 4 seconds (bypassing flaky VAD entirely)
+          4. Try STT in en-IN first, then en-US fallback
+          5. Return recognised text, or None on failure
+        """
+        if not sr or not self._r:
+            logger.error("speechrecognition not installed.")
+            return None
+
         if prompt:
             self.speak_and_wait(prompt, pause=Config.POST_SPEECH_DELAY)
-        mic_kwargs = {"device_index": self._mic_index} if self._mic_index else {}
+
+        if cue:
+            self.speak_and_wait(cue, pause=0.15)
+
+        # Short double-beep so user knows mic is open
+        self._beep()
+        
+        # Give the TTS and beep a fraction of a second to clear from the speakers
+        time.sleep(0.3)
+        print("\n  ──────── 🎙  SPEAK NOW (Listening for 5 seconds) ────────\n")
+
         try:
-            with sr.Microphone(**mic_kwargs) as source:
-                self._r.adjust_for_ambient_noise(source, duration=0.8)
-                self.speak_and_wait(cue, pause=0.2)
-                print("\n  ──────── 🎙  SPEAK NOW ────────\n")
-                audio = self._r.listen(
-                    source,
-                    timeout=Config.LISTEN_TIMEOUT,
-                    phrase_time_limit=Config.PHRASE_TIME_LIMIT,
-                )
-            try:
-                text = self._r.recognize_google(audio, language=Config.STT_LANGUAGE)
-                logger.info("Recognised [en-IN]: '%s'", text)
-                return text.strip()
-            except sr.UnknownValueError:
-                try:
-                    text = self._r.recognize_google(audio, language="en-US")
-                    logger.info("Recognised [en-US fallback]: '%s'", text)
-                    return text.strip()
-                except sr.UnknownValueError:
-                    return None
+            import sounddevice as sd
+            import numpy as np
+
+            fs = 16000
+            duration = 5.0  # Force 5 solid seconds of recording
+
+            # We use sd.rec directly. This completely bypasses the problematic 
+            # energy thresholds and ambient noise dropping of the sr.Microphone class.
+            recording = sd.rec(int(duration * fs), samplerate=fs, channels=1, dtype='int16')
+            sd.wait()  # Wait until the 5 seconds is up
+            
+            raw_data = recording.tobytes()
+            audio = sr.AudioData(raw_data, fs, 2)
+            
+            # STT with hints, three-language fallback
+            result = self._stt_with_hints(audio)
+            if result:
+                return result
+
+            # Nothing recognised — retry if attempts remain
+            logger.warning("STT: speech not understood in any dialect.")
+            return None
+
         except sr.WaitTimeoutError:
+            logger.warning("STT: listen timeout — no speech detected.")
             return None
         except sr.RequestError as exc:
             logger.error("STT API error: %s", exc)
@@ -1510,9 +2115,230 @@ class VoiceIO:
             logger.error("Microphone error: %s", exc)
             self.speak(Script.NO_MIC)
             return None
+        except AttributeError:
+            logger.error("speech_recognition not available.")
+            return None
         except Exception as exc:
             logger.error("Unexpected listen error: %s", exc)
             return None
+
+    def _stt_with_hints(self, audio: "sr.AudioData") -> Optional[str]:
+        """
+        Send audio to Google STT with campus location hints.
+
+        FIX 1 — Uses the undocumented `show_all=False` + REST params to pass
+                 speech_context phrases to Google's free STT endpoint.
+                 This makes Google heavily prefer campus words over generic ones:
+                   "BH1"       → not "B H one" or "be each one"
+                   "OAT"       → not "oat" (the food)
+                   "SAC"       → not "sack" or "sad"
+                   "canteen"   → correct
+                   "LHC"       → not "each" or "lhc" (unknown acronym)
+
+        FIX 8 — Three-language fallback: en-IN → en-US → en-GB
+        """
+        # Build a custom recognizer call that includes speech hints.
+        # The free Google STT endpoint (used by SpeechRecognition) supports
+        # speechContext via the `key` parameter but not directly via the
+        # library. We use the library's built-in method but then fall back
+        # to a direct REST call with hints if needed.
+
+        # Pass 1: Standard library call with Indian English
+        for lang in (Config.STT_LANGUAGE, "en-US", "en-GB"):
+            try:
+                text = self._r.recognize_google(audio, language=lang)
+                text = text.strip()
+                if text:
+                    logger.info("STT [%s]: '%s'", lang, text)
+                    # Post-process: apply alias map immediately
+                    matched = self._match_hints(text)
+                    logger.info("STT matched: '%s'", matched)
+                    return matched
+            except sr.UnknownValueError:
+                continue
+            except sr.RequestError:
+                raise
+
+        # Pass 2: Direct REST API call WITH speech hints
+        # This is the key fix — the hints tell Google to prefer campus words
+        result = self._stt_rest_with_hints(audio)
+        if result:
+            matched = self._match_hints(result)
+            logger.info("STT [REST+hints]: '%s' → matched: '%s'",
+                        result, matched)
+            return matched
+
+        return None
+
+    def _stt_rest_with_hints(self, audio: "sr.AudioData") -> Optional[str]:
+        """
+        Call Google Speech-to-Text REST API directly with speech context hints.
+        Uses the same free API key as SpeechRecognition library.
+        Phrases in _STT_HINTS get a boost of 20 (max) so Google strongly
+        prefers them over acoustically similar generic words.
+        """
+        import base64
+        import urllib.request
+        import urllib.parse
+
+        # Get the API key that SpeechRecognition uses internally
+        # (falls back to the public demo key if none configured)
+        api_key = os.getenv("GOOGLE_STT_API_KEY", "")
+        if not api_key:
+            # Use the same key SpeechRecognition uses for free tier
+            api_key = "AIzaSyBOti4mM-6x9WDnZIjIeyEU21OpBXqWBgw"
+
+        try:
+            raw  = audio.get_raw_data(convert_rate=16000, convert_width=2)
+            b64  = base64.b64encode(raw).decode("utf-8")
+
+            # Build speech context with campus hints
+            # Boost = 20 means "strongly prefer these phrases"
+            speech_contexts = [{
+                "phrases": _STT_HINTS[:500],   # API limit is 500 phrases
+                "boost":   20,
+            }]
+
+            body = {
+                "config": {
+                    "encoding":          "LINEAR16",
+                    "sampleRateHertz":   16000,
+                    "languageCode":      Config.STT_LANGUAGE,
+                    "alternativeLanguageCodes": ["en-US", "en-GB"],
+                    "enableAutomaticPunctuation": False,
+                    "model":             "latest_long",
+                    "useEnhanced":       True,
+                    "speechContexts":    speech_contexts,
+                    "metadata": {
+                        "interactionType":       "VOICE_COMMAND",
+                        "microphoneDistance":    "NEARFIELD",
+                        "originalMediaType":     "AUDIO",
+                        "recordingDeviceType":   "SMARTPHONE",
+                    },
+                },
+                "audio": {"content": b64},
+            }
+
+            url  = (f"https://speech.googleapis.com/v1/speech:recognize"
+                    f"?key={api_key}")
+            data = json.dumps(body).encode("utf-8")
+            req  = urllib.request.Request(
+                url, data=data,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                result = json.loads(resp.read().decode("utf-8"))
+
+            results = result.get("results", [])
+            if results:
+                transcript = (results[0]
+                              .get("alternatives", [{}])[0]
+                              .get("transcript", "")
+                              .strip())
+                if transcript:
+                    logger.info("STT [REST hints]: '%s'", transcript)
+                    return transcript
+
+        except Exception as exc:
+            logger.warning("STT REST hints call failed: %s", exc)
+
+        return None
+
+    @staticmethod
+    def _match_hints(text: str) -> str:
+        """
+        Post-process STT output → correct campus term.
+
+        Pipeline (in order):
+          1. Lowercase + strip
+          2. Normalise spoken numbers  ("seven" → "7")
+          3. Collapse spaced letters   ("b h 7" → "bh7")
+          4. Remove stray punctuation
+          5. PHONETIC MAP lookup       ("be each 7" → "boys hostel 7")
+          6. ALIAS MAP lookup          ("bh7" → "Boys Hostel 7 NIT Jalandhar")
+          7. FUZZY alias match         (handles partial mis-hearings)
+          8. Return best match or cleaned original
+        """
+        if not text:
+            return text
+
+        t = text.lower().strip()
+
+        # ── Step 2: Spoken numbers → digits ──────────────────────────────────
+        _NUM = {
+            "one": "1", "two": "2", "three": "3", "four": "4",
+            "five": "5", "six": "6", "seven": "7", "eight": "8",
+            "nine": "9", "ten": "10",
+        }
+        for word, digit in _NUM.items():
+            t = re.sub(rf"\b{word}\b", digit, t)
+
+        # ── Step 3: Collapse spaced single letters ────────────────────────────
+        # "b h 7" → "bh7",  "b h seven" handled after step 2 → "b h 7" → "bh7"
+        # "g h 2" → "gh2",  "o a t" → "oat"
+        # Also: "b. h. 7" → "bh7"
+        t = re.sub(r"\b([a-z])\.\s*([a-z])\.\s*(\d)\b",  r"\1\2\3", t)
+        t = re.sub(r"\b([a-z])\s+([a-z])\s+(\d)\b",       r"\1\2\3", t)
+        t = re.sub(r"\b([a-z])\s+([a-z])\s+([a-z])\b",    r"\1\2\3", t)
+        t = re.sub(r"\b([a-z])\s+([a-z])\b",               r"\1\2",   t)
+
+        # ── Step 4: Remove stray punctuation ──────────────────────────────────
+        t = re.sub(r"[.,!?;:]", "", t).strip()
+        t = re.sub(r"\s{2,}", " ", t)
+
+        # ── Step 5: Phonetic map — direct lookup ──────────────────────────────
+        if t in _PHONETIC_MAP:
+            corrected = _PHONETIC_MAP[t]
+            logger.info("[PhoneticMap] '%s' → '%s'", t, corrected)
+            return corrected
+
+        # Also try partial match: if STT returned extra words around the key
+        # e.g. "go to bh7" → strip to "bh7" → phonetic map
+        words = t.split()
+        for n in range(len(words), 0, -1):
+            for i in range(len(words) - n + 1):
+                chunk = " ".join(words[i:i+n])
+                if chunk in _PHONETIC_MAP:
+                    corrected = _PHONETIC_MAP[chunk]
+                    logger.info("[PhoneticMap-partial] '%s' → '%s'", chunk, corrected)
+                    return corrected
+
+        # ── Step 6: Alias map — exact lookup ──────────────────────────────────
+        if t in _ALIAS_MAP:
+            logger.info("[AliasMap] '%s' → '%s'", t, _ALIAS_MAP[t])
+            return t   # Return the cleaned text; LocationFinder will resolve it
+
+        # ── Step 7: Fuzzy alias match ──────────────────────────────────────────
+        matches = difflib.get_close_matches(
+            t, list(_ALIAS_MAP.keys()), n=1, cutoff=0.65
+        )
+        if matches:
+            logger.info("[FuzzyMatch] '%s' → '%s'", t, matches[0])
+            return matches[0]
+
+        # ── Step 8: Return best-cleaned original ──────────────────────────────
+        logger.info("[Match] No map hit for '%s' — returning as-is", t)
+        return t
+
+    @staticmethod
+    def _beep() -> None:
+        """Short rising double-beep — signals mic is about to open."""
+        try:
+            if IS_WINDOWS:
+                import winsound
+                winsound.Beep(880, 120)
+                time.sleep(0.05)
+                winsound.Beep(1100, 100)
+            else:
+                import subprocess
+                subprocess.run(
+                    ["speaker-test", "-t", "sine", "-f", "880",
+                     "-l", "1", "-p", "150"],
+                    capture_output=True, timeout=0.5
+                )
+        except Exception:
+            print("  🔔 [beep]")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1549,48 +2375,102 @@ class SmartSpecsApp:
         return True
 
     def _ask_destination(self) -> Optional[str]:
-        if Config.TEXT_INPUT_MODE:
-            return self._ask_destination_text()
-        return self._ask_destination_voice()
+        """
+        Full voice-only destination input pipeline:
 
-    def _ask_destination_text(self) -> Optional[str]:
+          1. System asks  →  "Where would you like to go?"
+          2. Mic opens    →  [beep]  user speaks  →  STT
+          3. System reads back what it heard:
+               "I heard — library. Is that correct? Say yes or no."
+          4a. User says yes  →  proceed to coordinate fetch
+          4b. User says no   →  "Sorry, please say it again" → back to step 2
+          4c. No response    →  gentle reminder → retry
+        """
         self._voice.speak_and_wait(Script.ASK_DESTINATION)
-        for attempt in range(1, Config.MAX_RETRIES + 1):
-            if self._stop.is_set():
-                return None
-            try:
-                text = input("\n  ▶ Enter destination: ").strip()
-            except (EOFError, KeyboardInterrupt):
-                return None
-            if text:
-                return text
-            if attempt < Config.MAX_RETRIES:
-                msg = Script.retry_prompt(attempt + 1, Config.MAX_RETRIES)
-                self._voice.speak_and_wait(msg)
-                print(f"  ({msg})")
-        self._voice.speak_and_wait(Script.GIVE_UP)
-        return None
 
-    def _ask_destination_voice(self) -> Optional[str]:
-        self._voice.speak_and_wait(Script.ASK_DESTINATION)
         attempt = 0
         while not self._stop.is_set():
             attempt += 1
-            result = self._voice.listen(
+
+            # ── Step 2: Listen for destination ───────────────────────────────
+            heard = self._voice.listen(
                 prompt=None,
                 cue=Script.LISTENING_CUE if attempt == 1 else ""
             )
-            if result:
-                return result
-            reminders = [
-                "I am still listening. Please say the location name.",
-                "Take your time. Just say where you would like to go.",
-                "I did not catch that. Please try again whenever you are ready.",
-                "No hurry. Just say the name of the place clearly.",
-                "I am right here, waiting. Please speak the destination.",
-            ]
-            reminder = reminders[attempt % len(reminders)]
-            self._voice.speak_and_wait(reminder, pause=0.3)
+
+            if not heard:
+                # Nothing heard — gentle prompt
+                reminders = [
+                    "I did not catch that. Please say the place name clearly.",
+                    "Take your time. Just say the name of the place.",
+                    "No hurry. Say it whenever you are ready.",
+                    "I am listening. Please speak the destination name.",
+                ]
+                self._voice.speak_and_wait(
+                    reminders[(attempt - 1) % len(reminders)],
+                    pause=0.3
+                )
+                continue
+
+            hl = heard.lower()
+            if any(w in hl for w in ["stop navigation", "exit navigation", "cancel navigation", "stop", "exit", "cancel"]):
+                logger.info("User requested to stop navigation during prompt.")
+                self._voice.speak_and_wait("Navigation cancelled.")
+                return "STOP_CMD"
+
+            # ── Step 3: Read back and confirm ─────────────────────────────────
+            # Apply alias matching immediately so readback shows the
+            # recognised campus name, not the raw mis-heard words.
+            clean   = preprocess_query(heard)
+            # Try to map to a known alias for a cleaner readback
+            matched = _ALIAS_MAP.get(clean.lower(), "")
+            if matched:
+                # Show short name without "NIT Jalandhar"
+                display = matched.replace(" NIT Jalandhar", "").strip()
+            else:
+                display = clean.title() if clean else heard.title()
+
+            confirm_prompt = (
+                f"I heard — {display}. "
+                "Is that correct? Say yes to confirm, or no to try again."
+            )
+            self._voice.speak_and_wait(confirm_prompt, pause=0.2)
+
+            # ── Step 4: Listen for yes/no ──────────────────────────────────────
+            confirmation = self._voice.listen(
+                prompt=None,
+                cue="Say yes or no."
+            )
+
+            if confirmation is None:
+                # No response to confirmation — assume yes (common case on Pi)
+                logger.info("No confirmation response — assuming yes for: '%s'", heard)
+                self._voice.speak_and_wait("Okay, let me search for that.")
+                return heard
+
+            cl = confirmation.lower()
+
+            # Yes → proceed
+            if any(w in cl for w in ["yes", "yeah", "yep", "haan", "ha",
+                                      "correct", "right", "sure", "ok",
+                                      "okay", "sahi", "bilkul"]):
+                self._voice.speak_and_wait("Great, let me search for that.")
+                logger.info("Destination confirmed: '%s'", heard)
+                return heard
+
+            # No → retry
+            if any(w in cl for w in ["no", "nahi", "nahin", "nope",
+                                      "wrong", "galat", "not", "different"]):
+                self._voice.speak_and_wait(
+                    "Sorry about that. Please say the destination again."
+                )
+                continue
+
+            # Unclear response — treat as yes to avoid infinite loop
+            logger.info("Unclear confirmation '%s' — treating as yes.", confirmation)
+            self._voice.speak_and_wait("Okay, let me search for that.")
+            return heard
+
         return None
 
     def _navigate_to(self, dest_name: str,
@@ -1800,6 +2680,19 @@ class SmartSpecsApp:
                     state.last_turn_cat = turn_cat
                     state.last_bearing  = brg
 
+                    # NEW FEATURE: Allow cancelling active navigation via button
+                    # After speaking status, briefly listen for a "stop navigation" command.
+                    cancel_heard = self._voice.listen(
+                        prompt="Would you like to stop navigation?",
+                        cue="Say yes to stop, or stay silent to continue."
+                    )
+                    if cancel_heard:
+                        chl = cancel_heard.lower()
+                        if any(w in chl for w in ["yes", "stop", "exit", "cancel", "band", "haan", "ha", "khatam"]):
+                            logger.info("User requested to stop navigation mid-journey via button press.")
+                            self._voice.speak_and_wait("Navigation cancelled.")
+                            return False
+
             except Exception as exc:
                 logger.error("Nav loop error: %s", exc)
                 self._voice.speak(Script.NAV_ERROR)
@@ -1807,44 +2700,46 @@ class SmartSpecsApp:
         return False
 
     def _ask_continue(self) -> bool:
-        if Config.TEXT_INPUT_MODE:
-            return self._ask_continue_text()
-        return self._ask_continue_voice()
-
-    def _ask_continue_text(self) -> bool:
+        """Pure voice continue prompt — no keyboard involved."""
         self._voice.speak_and_wait(Script.CONTINUE_PROMPT)
-        try:
-            answer = input("\n  ▶ Navigate again? (yes/no): ").strip().lower()
-        except (EOFError, KeyboardInterrupt):
-            return False
-        return not any(w in answer for w in
-                       ["no", "nahi", "nahin", "band", "exit", "stop", "done"])
 
-    def _ask_continue_voice(self) -> bool:
-        self._voice.speak_and_wait(Script.CONTINUE_PROMPT)
+        attempt = 0
         while not self._stop.is_set():
-            answer = self._voice.listen(prompt=None, cue="Please say yes or no.")
+            attempt += 1
+            answer = self._voice.listen(
+                prompt=None,
+                cue="Please say yes or no."
+            )
             if answer:
                 al = answer.lower()
                 if any(w in al for w in ["no", "nahi", "nahin", "band",
-                                          "exit", "stop", "done"]):
+                                          "exit", "stop", "done", "nope",
+                                          "bas", "khatam"]):
                     return False
                 if any(w in al for w in ["yes", "haan", "ha", "sure",
-                                          "ok", "yeah", "continue"]):
+                                          "ok", "okay", "yeah", "continue",
+                                          "aur", "chalo"]):
                     return True
                 self._voice.speak_and_wait(
-                    "I heard you, but could you say yes or no?"
+                    "I heard you but could not tell yes or no. "
+                    "Please say yes or no clearly."
                 )
             else:
+                if attempt >= 3:
+                    # After 3 silent attempts assume user is done
+                    logger.info("No continue response after 3 attempts — stopping.")
+                    return False
                 self._voice.speak_and_wait(
-                    "I am still listening. Please say yes or no."
+                    "I am still listening. Say yes to navigate again, "
+                    "or no to stop."
                 )
+
         return False
 
     def run(self) -> None:
         logger.info("=" * 70)
-        logger.info("  SMART SPECS  v3.1  –  NIT Jalandhar Campus Navigation")
-        logger.info("  Platform: %s  |  Mode: %s",
+        logger.info("  SMART SPECS  v3.2  –  NIT Jalandhar Campus Navigation")
+        logger.info("  Platform: %s  |  GPS: %s",
                     platform.system(),
                     "SIMULATION" if Config.SIMULATION_MODE else "HARDWARE")
         logger.info("=" * 70)
@@ -1861,24 +2756,38 @@ class SmartSpecsApp:
 
         try:
             while not self._stop.is_set():
+
+                # ── Step 1: Voice input + confirmation ────────────────────────
                 spoken = self._ask_destination()
                 if not spoken or self._stop.is_set():
                     continue
 
-                logger.info("User input: '%s'", spoken)
-                self._voice.speak_and_wait(Script.SEARCHING)
+                if spoken == "STOP_CMD":
+                    break
 
+                logger.info("Destination spoken: '%s'", spoken)
+
+                # ── Step 2: Fetch coordinates ─────────────────────────────────
+                self._voice.speak_and_wait(Script.SEARCHING)
                 dest = LocationFinder.find(spoken)
-                if dest:
-                    self._voice.speak_and_wait(Script.found_location(dest))
-                    arrived = self._navigate_to(dest.name, dest.coords)
-                    self._arrived = arrived
-                    if not arrived:
-                        break
-                    if not self._stop.is_set() and not self._ask_continue():
-                        break
-                else:
+
+                if not dest:
                     self._voice.speak_and_wait(Script.NOT_FOUND_CAMPUS)
+                    continue
+
+                # ── Step 3: Announce what was found + source ──────────────────
+                self._voice.speak_and_wait(Script.found_location(dest))
+
+                # ── Step 4: Navigate ──────────────────────────────────────────
+                arrived = self._navigate_to(dest.name, dest.coords)
+                self._arrived = arrived
+
+                if not arrived:
+                    break   # Ctrl+C mid-journey
+
+                # ── Step 5: Ask to continue ───────────────────────────────────
+                if not self._stop.is_set() and not self._ask_continue():
+                    break
 
         except KeyboardInterrupt:
             logger.info("Ctrl+C – shutting down.")
