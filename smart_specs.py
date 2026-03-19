@@ -4,33 +4,29 @@
 ║         SMART SPECS – Campus Navigation System for Visually Impaired        ║
 ║         Dr. B.R. Ambedkar National Institute of Technology, Jalandhar        ║
 ╠══════════════════════════════════════════════════════════════════════════════╣
-║  Version     : 3.2  (dynamic coords + smart triggers + push-button)         ║
+║  Version     : 3.3  (dual-mode: simple + Raspberry Pi)                      ║
 ║  Platform    : Raspberry Pi (production)  |  Windows/Linux (simulation)      ║
 ║  Python      : 3.8+                                                          ║
-║  Hardware    : NEO-6M GPS Module + USB Microphone + Speaker                  ║
+║  Hardware    : Pixhawk u-blox M8N GPS (raspi) | simulated (simple)           ║
 ╠══════════════════════════════════════════════════════════════════════════════╣
-║  WHAT'S IN THIS VERSION (v3.2)                                               ║
+║  WHAT'S IN THIS VERSION (v3.3)                                               ║
 ║  ─────────────────────────────────────────────────────────────────────────  ║
-║  FIX 1 — Dynamic coordinate fetching (no hardcoded lat/lon)                  ║
+║  NEW — Dual-mode operation (simple vs Raspberry Pi)                          ║
+║    • No flag  → simple/simulation mode (desktop testing)                     ║
+║    • -raspi   → Raspberry Pi mode with Pixhawk u-blox M8N GPS               ║
+║    • --gps-port / --gps-baud to override serial settings                     ║
+║    • u-blox M8N: GPS+GLONASS, $GN* NMEA, VTG/GLL sentence support           ║
+║    • Default port: /dev/ttyACM0 (USB), override with --gps-port              ║
+║                                                                              ║
+║  v3.2 — Dynamic coordinate fetching (no hardcoded lat/lon)                   ║
 ║    • User types/speaks destination → coords fetched automatically             ║
 ║    • OSM Overpass API (campus bbox hard-lock, Khiala impossible)              ║
 ║    • Google Places Text Search NEW API (locationRestriction, not hints)       ║
 ║    • Nominatim fallback with distance validation                              ║
 ║    • JSON cache (smart_specs_coords.json) — offline after first lookup        ║
-║                                                                              ║
-║  FIX 2 — Smart instructions (no more time-based spam)                        ║
-║    • Speaks only on: start / turn change / milestone / off-course /          ║
-║      stopped / advance warning / post-turn confirm / button press            ║
-║    • Roundabout straight-through handled explicitly                          ║
-║    • GPS heading smoother (circular mean of last 4 readings)                 ║
-║                                                                              ║
-║  FIX 3 — Push button support                                                 ║
-║    • Raspberry Pi: GPIO pin 17 (BCM), configurable                           ║
-║    • Simulation / Windows: press ENTER for same effect                       ║
-║                                                                              ║
-║  FIX 4 — Input preprocessing                                                 ║
-║    • "admin block in nit jalandhar" → "admin block" → API query              ║
-║    • Handles Hindi noise: mujhe jana hai, le chalo, dikhao                   ║
+║    • Smart instructions (no more time-based spam)                            ║
+║    • Push button support (GPIO on Pi, ENTER key on desktop)                  ║
+║    • Input preprocessing (Hindi noise removal, alias normalization)           ║
 ╠══════════════════════════════════════════════════════════════════════════════╣
 ║  Sources integrated:                                                         ║
 ║   • github.com/Uberi/speech_recognition  – STT engine & mic handling         ║
@@ -41,6 +37,11 @@
 ║  Install:                                                                    ║
 ║   pip install pynmea2 pyttsx3 speechrecognition geopy pyaudio pyserial       ║
 ║   pip install googlemaps python-dotenv                                       ║
+║                                                                              ║
+║  Usage:                                                                      ║
+║   python smart_specs.py              # simple/simulation mode                ║
+║   python smart_specs.py -raspi       # Raspberry Pi + u-blox M8N GPS         ║
+║   python smart_specs.py -raspi --gps-port /dev/serial0   # custom port       ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 """
 
@@ -151,14 +152,16 @@ else:
 # CONFIGURATION
 # ══════════════════════════════════════════════════════════════════════════════
 class Config:
-    SIMULATION_MODE: bool = True   # False = real NEO-6M GPS hardware
+    SIMULATION_MODE: bool = True   # False = real GPS hardware (set by -raspi flag)
 
     # Input is ALWAYS voice — user speaks the destination name.
     # The system does: listen → STT → confirm → fetch coords → navigate.
     # No keyboard/console input anywhere in the navigation flow.
 
     # ── GPS / Serial ──────────────────────────────────────────────────────────
-    GPS_PORT: str    = "/dev/serial0"
+    # Raspi mode uses Pixhawk u-blox M8N (USB → /dev/ttyACM0, UART → /dev/serial0)
+    # Simple mode ignores these (simulation generates fake fixes).
+    GPS_PORT: str    = "/dev/ttyACM0"
     GPS_BAUD: int    = 9600
     GPS_TIMEOUT: int = 1
 
@@ -1472,12 +1475,14 @@ class GPSHandler:
         logger.info("GPS stopped.")
 
     def _hardware(self) -> None:
+        logger.info("Opening GPS: %s @ %d baud (Pixhawk u-blox M8N)",
+                    Config.GPS_PORT, Config.GPS_BAUD)
         try:
             self._serial = serial.Serial(
                 Config.GPS_PORT, Config.GPS_BAUD, timeout=Config.GPS_TIMEOUT
             )
         except serial.SerialException as exc:
-            logger.error("Cannot open serial port: %s", exc)
+            logger.error("Cannot open serial port %s: %s", Config.GPS_PORT, exc)
             return
 
         while self._running:
@@ -1494,7 +1499,15 @@ class GPSHandler:
                 time.sleep(1)
 
     def _parse(self, sentence: str) -> None:
-        if not sentence.startswith(("$GPGGA", "$GPRMC", "$GNRMC", "$GNGGA")):
+        # u-blox M8N (Pixhawk) outputs $GN* (multi-constellation) in addition
+        # to $GP* sentences.  Also accept $GPVTG / $GNVTG for ground speed.
+        _ACCEPTED = (
+            "$GPGGA", "$GNGGA",
+            "$GPRMC", "$GNRMC",
+            "$GPVTG", "$GNVTG",
+            "$GPGLL", "$GNGLL",
+        )
+        if not sentence.startswith(_ACCEPTED):
             return
         try:
             msg = pynmea2.parse(sentence, check=False)
@@ -1525,6 +1538,21 @@ class GPSHandler:
                     valid     = True,
                 )
                 self._data.update(fix)
+            elif isinstance(msg, pynmea2.types.talker.VTG):
+                # u-blox M8N sends VTG with km/h in field spd_over_grnd_kmph
+                spd = getattr(msg, "spd_over_grnd_kmph", None)
+                if spd:
+                    self._pending["speed_kmh"] = float(spd)
+            elif isinstance(msg, pynmea2.types.talker.GLL):
+                status = getattr(msg, "status", "V")
+                if status == "A" and msg.latitude and msg.longitude:
+                    fix = GPSFix(
+                        lat       = msg.latitude,
+                        lon       = msg.longitude,
+                        speed_kmh = self._pending.get("speed_kmh", 0.0),
+                        valid     = True,
+                    )
+                    self._data.update(fix)
         except pynmea2.ParseError as exc:
             logger.debug("NMEA parse skip: %s", exc)
         except AttributeError:
@@ -2738,17 +2766,21 @@ class SmartSpecsApp:
 
     def run(self) -> None:
         logger.info("=" * 70)
-        logger.info("  SMART SPECS  v3.2  –  NIT Jalandhar Campus Navigation")
-        logger.info("  Platform: %s  |  GPS: %s",
-                    platform.system(),
-                    "SIMULATION" if Config.SIMULATION_MODE else "HARDWARE")
+        logger.info("  SMART SPECS  v3.3  –  NIT Jalandhar Campus Navigation")
+        if Config.SIMULATION_MODE:
+            mode_str = "SIMPLE (simulation)"
+        else:
+            mode_str = "RASPI (Pixhawk u-blox M8N @ %s:%d)" % (
+                Config.GPS_PORT, Config.GPS_BAUD)
+        logger.info("  Platform: %s  |  Mode: %s", platform.system(), mode_str)
         logger.info("=" * 70)
 
         self._voice.speak_and_wait(Script.WELCOME)
         self._handler.start()
         self._button.start()
 
-        fix_timeout = 10 if Config.SIMULATION_MODE else 60
+        # u-blox M8N cold start ≈ 26s, hot start ≈ 1s; allow generous timeout
+        fix_timeout = 10 if Config.SIMULATION_MODE else 90
         if not self._wait_for_fix(timeout=fix_timeout):
             logger.critical("GPS fix failed. Exiting.")
             self._shutdown()
@@ -2807,6 +2839,47 @@ class SmartSpecsApp:
 # ══════════════════════════════════════════════════════════════════════════════
 # ENTRY POINT
 # ══════════════════════════════════════════════════════════════════════════════
+def _parse_cli() -> None:
+    """Parse CLI flags and adjust Config before anything else runs."""
+    import argparse
+    parser = argparse.ArgumentParser(
+        description="Smart Specs – Campus Navigation System"
+    )
+    parser.add_argument(
+        "-raspi", "--raspi",
+        action="store_true",
+        help="Raspberry Pi mode: real GPS via Pixhawk u-blox M8N, GPIO button"
+    )
+    parser.add_argument(
+        "--gps-port",
+        type=str,
+        default=None,
+        help="Override GPS serial port (default: /dev/ttyACM0 in raspi mode)"
+    )
+    parser.add_argument(
+        "--gps-baud",
+        type=int,
+        default=None,
+        help="Override GPS baud rate (default: 9600)"
+    )
+    args = parser.parse_args()
+
+    if args.raspi:
+        Config.SIMULATION_MODE = False
+        Config.GPS_PORT = "/dev/ttyACM0"
+        Config.GPS_BAUD = 9600
+        logger.info("Raspberry Pi mode enabled – Pixhawk u-blox M8N GPS")
+    else:
+        Config.SIMULATION_MODE = True
+        logger.info("Simple/simulation mode (no -raspi flag)")
+
+    if args.gps_port:
+        Config.GPS_PORT = args.gps_port
+    if args.gps_baud:
+        Config.GPS_BAUD = args.gps_baud
+
+
 if __name__ == "__main__":
+    _parse_cli()
     app = SmartSpecsApp()
     app.run()

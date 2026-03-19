@@ -1,5 +1,9 @@
 # Smart Specs – Campus Navigation System
 # Install: pip install -r requirements.txt
+#
+# Usage:
+#   python smart_specs.py              # simple/simulation mode
+#   python smart_specs.py -raspi       # Raspberry Pi + Pixhawk u-blox M8N GPS
 
 pynmea2
 pyttsx3
@@ -9,3 +13,7 @@ PyAudio
 pyserial
 googlemaps
 python-dotenv
+numpy
+
+# Raspberry Pi only (install on Pi, skip on desktop):
+#   pip install RPi.GPIO
